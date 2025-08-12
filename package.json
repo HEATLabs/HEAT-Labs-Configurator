@@ -6,10 +6,10 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
-    "build": "electron-builder",
-    "build-win": "electron-builder --win",
-    "build-mac": "electron-builder --mac",
-    "build-linux": "electron-builder --linux",
+    "build": "electron-builder --config.asar=false",
+    "build-win": "electron-builder --win --config.asar=false",
+    "build-mac": "electron-builder --mac --config.asar=false",
+    "build-linux": "electron-builder --linux --config.asar=false",
     "dist": "electron-builder --publish=never"
   },
   "build": {
@@ -24,7 +24,7 @@
       "node_modules/**/*"
     ],
     "win": {
-      "target": "nsis",
+      "target": "portable",
       "icon": "assets/icon.ico"
     },
     "mac": {
