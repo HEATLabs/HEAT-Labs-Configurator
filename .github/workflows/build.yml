@@ -12,6 +12,13 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: macos-latest
+            electron_arch: x64,arm64
+          - os: ubuntu-latest
+            electron_arch: x64
+          - os: windows-latest
+            electron_arch: x64
 
     steps:
     - uses: actions/checkout@v4
@@ -20,12 +27,34 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '20'
+        cache: 'npm'
 
     - name: Install dependencies
       run: npm install
 
     - name: Build project
       run: npm run build
+
+    - name: Install Electron Builder
+      run: npm install electron-builder --save-dev
+
+    - name: Set up GitHub Token
+      if: matrix.os == 'macos-latest'
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        echo "GH_TOKEN=$GH_TOKEN" >> $GITHUB_ENV
+
+    - name: Build Electron app
+      run: |
+        if [ "${{ matrix.os }}" == "macos-latest" ]; then
+          npx electron-builder --${{ matrix.os }} --config.asar=false --publish=never
+        else
+          npx electron-builder --${{ matrix.os }} --config.asar=false
+        fi
+      env:
+        CI: true
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
@@ -47,8 +76,8 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          artifacts/PCW-Configurator-ubuntu-latest/*
-          artifacts/PCW-Configurator-macos-latest/*
-          artifacts/PCW-Configurator-windows-latest/*
+          artifacts/build-ubuntu-latest/*
+          artifacts/build-macos-latest/*
+          artifacts/build-windows-latest/*
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
