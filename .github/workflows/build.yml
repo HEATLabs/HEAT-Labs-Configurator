@@ -6,49 +6,113 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-
+  build-ubuntu:
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Use Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-    - name: Install dependencies
-      run: npm install
+      - name: Install dependencies
+        run: npm install
 
-    - name: Build project
-      run: npm run build
+      - name: Build project
+        run: npm run build
 
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: build-${{ matrix.os }}
-        path: dist/
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-ubuntu
+          path: dist/
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build project
+        run: npm run build
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-macos
+          path: dist/
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build project
+        run: npm run build
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-windows
+          path: dist/
 
   release:
-    needs: build
+    needs: [build-ubuntu, build-macos, build-windows]
     runs-on: ubuntu-latest
-
+    if: always()   # Run even if some build jobs fail
     steps:
-    - name: Download all artifacts
-      uses: actions/download-artifact@v3
-      with:
-        path: artifacts
+      - name: Download Ubuntu artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: build-ubuntu
+          path: artifacts/build-ubuntu
+        continue-on-error: true
 
-    - name: Create Release
-      uses: softprops/action-gh-release@v1
-      with:
-        files: |
-          artifacts/PCW-Configurator-ubuntu-latest/*
-          artifacts/PCW-Configurator-macos-latest/*
-          artifacts/PCW-Configurator-windows-latest/*
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Download MacOS artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: build-macos
+          path: artifacts/build-macos
+        continue-on-error: true
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: build-windows
+          path: artifacts/build-windows
+        continue-on-error: true
+
+      - name: List all downloaded artifacts
+        run: |
+          echo "Ubuntu:"
+          ls artifacts/build-ubuntu || echo "No Ubuntu artifact"
+          echo "MacOS:"
+          ls artifacts/build-macos || echo "No MacOS artifact"
+          echo "Windows:"
+          ls artifacts/build-windows || echo "No Windows artifact"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artifacts/build-ubuntu/*
+            artifacts/build-macos/*
+            artifacts/build-windows/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
