@@ -53,9 +53,9 @@ jobs:
       - name: Create release tag
         id: tag
         run: |
-          TAG_NAME="release-$(date +'%Y%m%d%H%M%S')"
+          TAG_NAME="Project-CW-Configurator-v$(date +'%Y%m%d%H%M%S')"
           echo "Tagging with $TAG_NAME"
-          git tag $TAG_NAME
+          git tag -a $TAG_NAME -m "Release created on $(date) by GitHub Actions"
           git push origin $TAG_NAME
           echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
 
