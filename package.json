@@ -14,7 +14,7 @@
   },
   "build": {
     "appId": "com.pcwstats.configurator",
-    "productName": "PCW Configurator by PCWStats",
+    "productName": "PCW-Configurator",
     "directories": {
       "output": "dist"
     },
