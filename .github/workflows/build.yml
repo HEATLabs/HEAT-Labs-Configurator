@@ -78,21 +78,21 @@ jobs:
     if: always()   # Run even if some build jobs fail
     steps:
       - name: Download Ubuntu artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: build-ubuntu
           path: artifacts/build-ubuntu
         continue-on-error: true
 
       - name: Download MacOS artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: build-macos
           path: artifacts/build-macos
         continue-on-error: true
 
       - name: Download Windows artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: build-windows
           path: artifacts/build-windows
