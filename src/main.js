@@ -9,6 +9,9 @@ const fs = require('fs').promises;
 
 let mainWindow;
 
+// Development flag - set to true during development
+const isDevelopment = false;
+
 function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1280,
@@ -18,7 +21,8 @@ function createWindow() {
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false,
-            enableRemoteModule: true
+            enableRemoteModule: true,
+            devTools: isDevelopment
         },
         frame: false,
         titleBarStyle: 'hidden',
@@ -28,6 +32,22 @@ function createWindow() {
     });
 
     mainWindow.loadFile('src/index.html');
+
+    // Block dev tools in production
+    if (!isDevelopment) {
+        mainWindow.webContents.on('devtools-opened', () => {
+            mainWindow.webContents.closeDevTools();
+        });
+
+        mainWindow.webContents.on('before-input-event', (event, input) => {
+            // Block F12, Ctrl+Shift+I, Ctrl+Shift+C
+            if (input.key === 'F12' ||
+                (input.control && input.shift && input.key.toLowerCase() === 'i') ||
+                (input.control && input.shift && input.key.toLowerCase() === 'c')) {
+                event.preventDefault();
+            }
+        });
+    }
 
     mainWindow.once('ready-to-show', () => {
         mainWindow.show();
