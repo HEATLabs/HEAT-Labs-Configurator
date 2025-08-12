@@ -6,50 +6,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-ubuntu:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Build project
-        run: npm run build
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-ubuntu
-          path: dist/
-
-  build-macos:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Build project
-        run: npm run build
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-macos
-          path: dist/
-
   build-windows:
     runs-on: windows-latest
     steps:
@@ -73,25 +29,11 @@ jobs:
           path: dist/
 
   release:
-    needs: [build-ubuntu, build-macos, build-windows]
+    needs: build-windows
     runs-on: ubuntu-latest
-    if: always()   # Run even if some build jobs fail
+    if: always()
     steps:
       - uses: actions/checkout@v4
-
-      - name: Download Ubuntu artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: build-ubuntu
-          path: artifacts/build-ubuntu
-        continue-on-error: true
-
-      - name: Download MacOS artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: build-macos
-          path: artifacts/build-macos
-        continue-on-error: true
 
       - name: Download Windows artifact
         uses: actions/download-artifact@v4
@@ -100,12 +42,8 @@ jobs:
           path: artifacts/build-windows
         continue-on-error: true
 
-      - name: List all downloaded artifacts
+      - name: List downloaded artifact
         run: |
-          echo "Ubuntu:"
-          ls artifacts/build-ubuntu || echo "No Ubuntu artifact"
-          echo "MacOS:"
-          ls artifacts/build-macos || echo "No MacOS artifact"
           echo "Windows:"
           ls artifacts/build-windows || echo "No Windows artifact"
 
@@ -122,9 +60,6 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
-          files: |
-            artifacts/build-ubuntu/*
-            artifacts/build-macos/*
-            artifacts/build-windows/*
+          files: artifacts/build-windows/*
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
