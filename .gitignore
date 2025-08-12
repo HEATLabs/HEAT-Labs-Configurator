@@ -180,5 +180,5 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 /.idea
-/V2/node_modules/
-/V2/node_modules
+/node_modules
+package-lock.json
