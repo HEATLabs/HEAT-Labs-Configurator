@@ -5,14 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PCW Configurator</title>
     <link rel="stylesheet" href="styles.css">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://cdn.jsdelivr.net;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://cdn.jsdelivr.net https://pcwstats-pixel-api.vercel.app;">
   </head>
   <body>
+    <!-- Custom Privacy-Focused Tracking Pixel -->
+    <img src="https://pcwstats-pixel-api.vercel.app/api/track/pcw-configurator-app.png" alt="" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;" class="pcwstats-tracking-pixel" data-page="pcw-configurator-app">
     <!-- Custom Title Bar -->
     <div class="title-bar">
       <div class="title-bar-left">
         <img class="title-bar-icon" src="https://cdn.jsdelivr.net/gh/PCWStats/Website-Images@main/logo/logo.webp" alt="PCWStats">
-        <span class="title-bar-title">PCW Configurator by PCWStats - v1.0.2</span>
+        <span class="title-bar-title">PCW Configurator by PCWStats - v1.0.3</span>
       </div>
       <div class="title-bar-controls">
         <button class="title-bar-button minimize-btn" id="minimizeBtn">

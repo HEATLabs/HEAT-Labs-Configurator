@@ -1,6 +1,6 @@
 {
   "name": "pcw-configurator",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Project CW Game Configurator - Desktop Application by PCWStats Team",
   "main": "src/main.js",
   "scripts": {
