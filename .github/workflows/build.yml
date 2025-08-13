@@ -25,11 +25,17 @@ jobs:
       - name: Build project
         run: npm run build
 
+      - name: Clean up build artifacts
+        run: |
+          Remove-Item -Path "dist\builder-debug.yml" -ErrorAction SilentlyContinue
+          Remove-Item -Path "dist\latest.yml" -ErrorAction SilentlyContinue
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: build-windows
-          path: dist/
+          path: dist/*.exe
+          if-no-files-found: error
 
   release:
     needs: build-windows
@@ -44,11 +50,6 @@ jobs:
           name: build-windows
           path: artifacts/build-windows
         continue-on-error: true
-
-      - name: List downloaded artifact
-        run: |
-          echo "Windows:"
-          ls artifacts/build-windows || echo "No Windows artifact"
 
       - name: Create release tag
         id: tag
