@@ -235,7 +235,6 @@ async function initializeApp() {
 
     // Set up event listeners
     browseFileBtn.addEventListener('click', loadConfigFile);
-    changeFileBtn.addEventListener('click', loadConfigFile);
     saveConfigBtn.addEventListener('click', saveConfig);
     downloadConfigBtn.addEventListener('click', downloadConfig);
     resetAllBtn.addEventListener('click', resetAllSettings);
@@ -291,37 +290,119 @@ async function loadConfigFile() {
 
             if (fileResult.success) {
                 try {
-                    configData = JSON.parse(fileResult.content);
-                    originalConfig = JSON.parse(fileResult.content);
-                    currentFilePath = filePath;
+                    // Try to parse as JSON first
+                    let parsedData = JSON.parse(fileResult.content);
 
-                    // Check if this is the new format with "settings" wrapper
-                    if (configData.settings) {
-                        configData = configData.settings;
+                    // Handle different file formats
+                    if (typeof parsedData === 'object' && parsedData !== null) {
+                        // New format with "settings" wrapper
+                        if (parsedData.settings) {
+                            configData = parsedData.settings;
+                        }
+                        // Old format with direct settings
+                        else {
+                            configData = parsedData;
+                        }
+
+                        originalConfig = JSON.parse(JSON.stringify(configData)); // Deep copy
+                        currentFilePath = filePath;
+
+                        // Update UI
+                        const fileName = filePath.split(/[\\/]/).pop();
+                        if (fileNameEl) fileNameEl.textContent = fileName;
+                        if (filePathEl) filePathEl.textContent = filePath;
+
+                        // Enable all tabs
+                        tabBtns.forEach(btn => {
+                            if (btn.dataset.tab !== 'home') {
+                                btn.classList.remove('disabled');
+                                btn.disabled = false;
+                            }
+                        });
+
+                        // Show action bar
+                        const actionBar = document.getElementById('actionBar');
+                        if (actionBar) actionBar.style.display = 'flex';
+
+                        // Switch to first settings tab
+                        switchTab('aiming');
+
+                        // Render all settings
+                        renderAllSettings();
+
+                        showToast('Configuration file loaded successfully!');
+                    } else {
+                        showToast('Invalid file format: File is not a valid JSON object', 'error');
                     }
+                } catch (parseError) {
+                    // Try to handle non-JSON files or malformed JSON
+                    try {
+                        // Check if it's a minified JSON file without proper formatting
+                        const fixedContent = fileResult.content
+                            .replace(/([{\[,])\s*([^"\s]+)\s*:/g, '$1"$2":') // Fix unquoted keys
+                            .replace(/'/g, '"'); // Replace single quotes with double quotes
 
-                    // Update UI
-                    const fileName = filePath.split(/[\\/]/).pop();
-                    fileNameEl.textContent = fileName;
-                    filePathEl.textContent = filePath;
+                        const parsedData = JSON.parse(fixedContent);
 
-                    // Show config content
-                    fileSection.style.display = 'none';
-                    configContent.style.display = 'flex';
+                        if (parsedData.settings) {
+                            configData = parsedData.settings;
+                        } else {
+                            configData = parsedData;
+                        }
 
-                    // Render all settings
-                    renderAllSettings();
+                        originalConfig = JSON.parse(JSON.stringify(configData));
+                        currentFilePath = filePath;
 
-                    showToast('Configuration file loaded successfully!');
-                } catch (error) {
-                    showToast('Error parsing file. Please make sure it\'s a valid JSON file.', 'error');
+                        // Update UI
+                        const fileName = filePath.split(/[\\/]/).pop();
+                        if (fileNameEl) fileNameEl.textContent = fileName;
+                        if (filePathEl) filePathEl.textContent = filePath;
+
+                        // Enable all tabs
+                        tabBtns.forEach(btn => {
+                            if (btn.dataset.tab !== 'home') {
+                                btn.classList.remove('disabled');
+                                btn.disabled = false;
+                            }
+                        });
+
+                        // Show action bar
+                        const actionBar = document.getElementById('actionBar');
+                        if (actionBar) actionBar.style.display = 'flex';
+
+                        // Switch to first settings tab
+                        switchTab('aiming');
+
+                        // Render all settings
+                        renderAllSettings();
+
+                        showToast('Configuration file loaded successfully! (Auto-corrected format)');
+                    } catch (finalError) {
+                        console.error('Final parsing error:', finalError);
+                        showToast(`Error parsing file: ${finalError.message}`, 'error');
+                    }
                 }
             } else {
                 showToast('Error reading file: ' + fileResult.error, 'error');
             }
         }
     } catch (error) {
+        console.error('File loading error:', error);
         showToast('Error loading file: ' + error.message, 'error');
+    }
+}
+
+// Helper function to check file content
+function isValidColdWarProject(content) {
+    try {
+        const parsed = JSON.parse(content);
+        return typeof parsed === 'object' && parsed !== null && (
+            parsed.settings !== undefined ||
+            parsed['cw::AimingProjectSettings'] !== undefined ||
+            parsed['engine::WindowProjectSettings'] !== undefined
+        );
+    } catch (e) {
+        return false;
     }
 }
 
@@ -852,7 +933,20 @@ function showToast(message, type = 'success') {
 
     const toast = document.createElement('div');
     toast.className = `toast-notification toast-${type}`;
-    toast.textContent = message;
+
+    // Create message content with optional details
+    const messageContent = document.createElement('div');
+    messageContent.className = 'toast-message';
+    messageContent.textContent = message;
+    toast.appendChild(messageContent);
+
+    // Add troubleshooting tip for parse errors
+    if (type === 'error' && message.includes('parsing')) {
+        const tip = document.createElement('div');
+        tip.className = 'toast-tip';
+        tip.textContent = 'Tip: Make sure the file hasn\'t been modified incorrectly';
+        toast.appendChild(tip);
+    }
 
     document.body.appendChild(toast);
 
@@ -869,7 +963,7 @@ function showToast(message, type = 'success') {
                 toast.parentNode.removeChild(toast);
             }
         }, 300);
-    }, 3000);
+    }, type === 'error' ? 5000 : 3000);
 }
 
 // Initialize splash screen fade out

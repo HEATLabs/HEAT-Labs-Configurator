@@ -913,6 +913,117 @@ body {
 	justify-content: flex-end;
 }
 
+/* Home Tab Styles */
+.home-content {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+	padding: 2rem;
+}
+
+.upload-container {
+	text-align: center;
+	background: var(--card-bg);
+	padding: 4rem 3rem;
+	border-radius: 16px;
+	border: 2px dashed var(--border-color);
+	max-width: 500px;
+	width: 100%;
+	transition: var(--transition);
+	box-shadow: var(--shadow-medium);
+}
+
+.upload-container:hover {
+	border-color: var(--accent-color);
+	background: var(--accent-color-light);
+	transform: translateY(-2px);
+	box-shadow: var(--shadow-heavy);
+}
+
+.upload-icon {
+	margin-bottom: 2rem;
+	opacity: 0.7;
+	color: var(--accent-color);
+}
+
+.upload-container h2 {
+	font-size: 1.75rem;
+	font-weight: 600;
+	margin-bottom: 0.75rem;
+	color: var(--text-primary);
+}
+
+.upload-container p {
+	color: var(--text-secondary);
+	margin-bottom: 2.5rem;
+	font-size: 1.1rem;
+	line-height: 1.5;
+}
+
+/* Disabled tabs */
+.tab-btn.disabled {
+	opacity: 0.5;
+	pointer-events: none;
+	color: var(--text-muted);
+}
+
+.tab-btn.disabled svg {
+	opacity: 0.5;
+}
+
+/* File Info Section */
+.file-info {
+	background: var(--bg-secondary);
+	padding: 1.5rem 2rem;
+	border-bottom: 1px solid var(--border-color);
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.file-details {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+}
+
+.file-icon {
+	color: var(--accent-color);
+	opacity: 0.8;
+}
+
+.file-name-container {
+	display: flex;
+	flex-direction: column;
+}
+
+.file-name {
+	font-weight: 600;
+	color: var(--text-primary);
+	font-size: 1.1rem;
+}
+
+.file-path {
+	font-size: 0.85rem;
+	color: var(--text-muted);
+	margin-top: 2px;
+}
+
+.toast-notification.toast-error {
+	background-color: var(--danger-color);
+	text-align: left;
+	max-width: 500px;
+}
+
+.toast-tip {
+	font-size: 0.85rem;
+	opacity: 0.8;
+	margin-top: 0.5rem;
+	padding-top: 0.5rem;
+	border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
 	.title-bar-title {

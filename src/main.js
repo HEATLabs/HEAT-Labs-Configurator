@@ -90,8 +90,8 @@ ipcMain.handle('show-open-dialog', async () => {
     const result = await dialog.showOpenDialog(mainWindow, {
         properties: ['openFile'],
         filters: [{
-                name: 'Project Files',
-                extensions: ['project']
+                name: 'Project CW Config Files',
+                extensions: ['project', 'json']
             },
             {
                 name: 'All Files',
@@ -106,6 +106,24 @@ ipcMain.handle('show-open-dialog', async () => {
 ipcMain.handle('read-file', async (event, filePath) => {
     try {
         const content = await fs.readFile(filePath, 'utf8');
+
+        // Basic validation
+        if (!content.trim()) {
+            return {
+                success: false,
+                error: 'File is empty'
+            };
+        }
+
+        // Check if it looks like a valid project file
+        if (!content.includes('AimingProjectSettings') &&
+            !content.includes('WindowProjectSettings')) {
+            return {
+                success: false,
+                error: 'File does not appear to be a valid coldwar.project file'
+            };
+        }
+
         return {
             success: true,
             content
