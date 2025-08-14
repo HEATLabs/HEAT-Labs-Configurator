@@ -46,41 +46,83 @@ body {
 	top: 0;
 	left: 0;
 	right: 0;
-	height: 32px;
+	height: 35px;
 	background: var(--bg-secondary);
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	z-index: 1001;
 	-webkit-app-region: drag;
+	padding: 0 8px;
+}
+
+.title-bar::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 40px;
+	opacity: 0.3;
+	pointer-events: none;
 }
 
 .title-bar-left {
 	display: flex;
 	align-items: center;
-	gap: 8px;
-	padding-left: 12px;
+	gap: 12px;
+	padding-left: 1px;
+	height: 100%;
 }
 
 .title-bar-icon {
-	width: 16px;
-	height: 16px;
+	width: 20px;
+	height: 20px;
+	border-radius: 4px;
+	object-fit: contain;
+	transition: var(--transition);
+}
+
+.title-bar-left:hover .title-bar-icon {
+	transform: rotate(15deg);
 }
 
 .title-bar-title {
 	font-size: 13px;
 	font-weight: 500;
 	color: var(--text-secondary);
+	letter-spacing: 0.25px;
+	position: relative;
+}
+
+.title-bar-title::after {
+	content: '';
+	position: absolute;
+	left: 0;
+	bottom: -2px;
+	width: 100%;
+	height: 1px;
+	background: var(--accent-color);
+	transform: scaleX(0);
+	transform-origin: right;
+	transition: transform 0.3s ease;
+}
+
+.title-bar-left:hover .title-bar-title::after {
+	transform: scaleX(1);
+	transform-origin: left;
 }
 
 .title-bar-controls {
 	display: flex;
 	-webkit-app-region: no-drag;
+	height: 100%;
+	align-items: center;
 }
 
 .title-bar-button {
-	width: 46px;
-	height: 32px;
+	width: 40px;
+	height: 100%;
 	background: transparent;
 	border: none;
 	color: var(--text-secondary);
@@ -89,6 +131,8 @@ body {
 	align-items: center;
 	justify-content: center;
 	transition: var(--transition);
+	position: relative;
+	border-radius: 0;
 }
 
 .title-bar-button:hover {
@@ -96,9 +140,56 @@ body {
 	color: var(--text-primary);
 }
 
+.title-bar-button svg {
+	width: 12px;
+	height: 12px;
+	transition: var(--transition);
+}
+
+.title-bar-button:hover svg {
+	transform: scale(1.1);
+}
+
+.title-bar-button.minimize-btn:hover {
+	background: var(--bg-tertiary);
+}
+
+.title-bar-button.maximize-btn:hover {
+	background: var(--bg-tertiary);
+}
+
+.title-bar-button.close-btn {
+	border-top-right-radius: 4px;
+}
+
 .title-bar-button.close-btn:hover {
 	background: var(--danger-color);
 	color: white;
+}
+
+.title-bar-button::after {
+	content: '';
+	position: absolute;
+	left: 0;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 1px;
+	height: 16px;
+	background: var(--border-color);
+	opacity: 0.5;
+}
+
+.title-bar-button:first-child::after {
+	display: none;
+}
+
+/* Window state indicators */
+.title-bar-button.minimize-btn:hover svg {
+	transform: translateY(1px);
+}
+
+.title-bar-button.maximize-btn:hover svg {
+	transform: scale(0.9);
 }
 
 /* Splash Screen */
@@ -1026,8 +1117,21 @@ body {
 
 /* Responsive Design */
 @media (max-width: 768px) {
+	.title-bar {
+		height: 36px;
+	}
+
 	.title-bar-title {
 		display: none;
+	}
+
+	.title-bar-icon {
+		width: 18px;
+		height: 18px;
+	}
+
+	.title-bar-button {
+		width: 36px;
 	}
 
 	.header-content {
