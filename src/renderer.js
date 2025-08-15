@@ -6,6 +6,7 @@ const {
 let configData = null;
 let originalConfig = null;
 let currentFilePath = null;
+let hasAttemptedAutoLoad = false;
 
 // Default values
 const defaultValues = {
@@ -268,6 +269,9 @@ async function initializeApp() {
 
     // Initialize maximize button state
     updateMaximizeButton();
+
+    // Load options and check for config file
+    await loadOptions();
 }
 
 async function updateMaximizeButton() {
@@ -296,6 +300,7 @@ function switchTab(tabId) {
 
 async function loadConfigFile() {
     try {
+        hasAttemptedAutoLoad = true;
         const result = await ipcRenderer.invoke('show-open-dialog');
 
         if (!result.canceled && result.filePaths.length > 0) {
@@ -431,7 +436,12 @@ async function browseGamePath() {
             const path = result.filePaths[0];
             gamePathInput.value = path;
             await saveOptions();
-            checkForConfigFile(path);
+
+            // Check if config exists in this path
+            const configResult = await ipcRenderer.invoke('check-config-exists', path);
+            if (configResult.exists) {
+                await loadConfigFromPath(configResult.path);
+            }
         }
     } catch (error) {
         showToast('Error selecting game path: ' + error.message, 'error');
@@ -465,12 +475,120 @@ async function loadOptions() {
             autoLoadCheckbox.checked = options.autoLoad !== false; // default to true
 
             // If auto-load is enabled and path exists, check for config file
-            if (options.autoLoad !== false && options.gamePath) {
-                checkForConfigFile(options.gamePath);
+            if (!hasAttemptedAutoLoad && options.autoLoad !== false && options.gamePath) {
+                hasAttemptedAutoLoad = true;
+                // Wait for splash screen to finish (3.0s)
+                setTimeout(async () => {
+                    try {
+                        const result = await ipcRenderer.invoke('check-config-exists', options.gamePath);
+                        if (result.exists) {
+                            await loadConfigFromPath(result.path);
+                        }
+                    } catch (error) {
+                        console.error('Error checking for config file:', error);
+                    }
+                }, 3000);
             }
         }
     } catch (error) {
         console.error('Error loading options:', error);
+    }
+}
+
+async function loadConfigFromPath(filePath) {
+    try {
+        const fileResult = await ipcRenderer.invoke('read-file', filePath);
+
+        if (fileResult.success) {
+            try {
+                // Try to parse as JSON first
+                let parsedData = JSON.parse(fileResult.content);
+
+                // Handle different file formats
+                if (typeof parsedData === 'object' && parsedData !== null) {
+                    // New format with "settings" wrapper
+                    if (parsedData.settings) {
+                        configData = parsedData.settings;
+                    }
+                    // Old format with direct settings
+                    else {
+                        configData = parsedData;
+                    }
+
+                    originalConfig = JSON.parse(JSON.stringify(configData)); // Deep copy
+                    currentFilePath = filePath;
+
+                    // Enable all tabs
+                    tabBtns.forEach(btn => {
+                        if (btn.dataset.tab !== 'home') {
+                            btn.classList.remove('disabled');
+                            btn.disabled = false;
+                        }
+                    });
+
+                    // Show action bar
+                    const actionBar = document.getElementById('actionBar');
+                    if (actionBar) actionBar.style.display = 'flex';
+
+                    // Switch to first settings tab
+                    switchTab('aiming');
+
+                    // Render all settings
+                    renderAllSettings();
+
+                    showToast('Configuration file loaded automatically from game directory');
+                } else {
+                    showToast('Invalid file format: File is not a valid JSON object', 'error');
+                }
+            } catch (parseError) {
+                // Try to handle non-JSON files or malformed JSON
+                try {
+                    // Check if it's a minified JSON file without proper formatting
+                    const fixedContent = fileResult.content
+                        .replace(/([{\[,])\s*([^"\s]+)\s*:/g, '$1"$2":') // Fix unquoted keys
+                        .replace(/'/g, '"'); // Replace single quotes with double quotes
+
+                    const parsedData = JSON.parse(fixedContent);
+
+                    if (parsedData.settings) {
+                        configData = parsedData.settings;
+                    } else {
+                        configData = parsedData;
+                    }
+
+                    originalConfig = JSON.parse(JSON.stringify(configData));
+                    currentFilePath = filePath;
+
+                    // Enable all tabs
+                    tabBtns.forEach(btn => {
+                        if (btn.dataset.tab !== 'home') {
+                            btn.classList.remove('disabled');
+                            btn.disabled = false;
+                        }
+                    });
+
+                    // Show action bar
+                    const actionBar = document.getElementById('actionBar');
+                    if (actionBar) actionBar.style.display = 'flex';
+
+                    // Switch to first settings tab
+                    switchTab('aiming');
+
+                    // Render all settings
+                    renderAllSettings();
+
+                    showToast('Configuration file loaded successfully! (Auto-corrected format)');
+                } catch (finalError) {
+                    console.error('Final parsing error:', finalError);
+                    showToast(`Error parsing file: ${finalError.message}`, 'error');
+                }
+            }
+        } else {
+            showToast('Error reading file: ' + fileResult.error, 'error');
+        }
+    } catch (error) {
+        console.error('File loading error:', error);
+        showToast('Error loading file: ' + error.message, 'error');
     }
 }
 
@@ -515,8 +633,10 @@ async function checkForConfigFile(gamePath) {
 }
 
 function renderOptionsSettings() {
-    // Options are rendered statically in HTML, i just need to load values
-    loadOptions();
+    if (configData && configData.options) {
+        gamePathInput.value = configData.options.gamePath || '';
+        autoLoadCheckbox.checked = configData.options.autoLoad !== false;
+    }
 }
 
 function renderAllSettings() {
