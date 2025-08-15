@@ -9,6 +9,10 @@ let currentFilePath = null;
 
 // Default values
 const defaultValues = {
+    options: {
+        gamePath: '',
+        autoLoad: true
+    },
     aiming: {
         "aimAssistSensitivityMultiplierAt500M": 0.5,
         "aimAssistSensitivityMultiplierAtZeroM": 0.5,
@@ -199,6 +203,12 @@ const saveConfigBtn = document.getElementById('saveConfig');
 const downloadConfigBtn = document.getElementById('downloadConfig');
 const resetAllBtn = document.getElementById('resetAll');
 
+// Options
+const gamePathInput = document.getElementById('gamePathInput');
+const browseGamePathBtn = document.getElementById('browseGamePath');
+const clearGamePathBtn = document.getElementById('clearGamePath');
+const autoLoadCheckbox = document.getElementById('autoLoadCheckbox');
+
 // Window control buttons
 const minimizeBtn = document.getElementById('minimizeBtn');
 const maximizeBtn = document.getElementById('maximizeBtn');
@@ -216,6 +226,7 @@ const markerSettingsContent = document.getElementById('marker-settings-content')
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
     initializeApp();
+    loadOptions();
 });
 
 async function initializeApp() {
@@ -238,6 +249,9 @@ async function initializeApp() {
     saveConfigBtn.addEventListener('click', saveConfig);
     downloadConfigBtn.addEventListener('click', downloadConfig);
     resetAllBtn.addEventListener('click', resetAllSettings);
+    browseGamePathBtn.addEventListener('click', browseGamePath);
+    clearGamePathBtn.addEventListener('click', clearGamePath);
+    autoLoadCheckbox.addEventListener('change', saveOptions);
 
     // Tab switching
     tabBtns.forEach(btn => {
@@ -406,6 +420,105 @@ function isValidColdWarProject(content) {
     }
 }
 
+async function browseGamePath() {
+    try {
+        const result = await ipcRenderer.invoke('show-open-dialog', {
+            properties: ['openDirectory'],
+            title: 'Select Project CW Installation Folder'
+        });
+
+        if (!result.canceled && result.filePaths.length > 0) {
+            const path = result.filePaths[0];
+            gamePathInput.value = path;
+            await saveOptions();
+            checkForConfigFile(path);
+        }
+    } catch (error) {
+        showToast('Error selecting game path: ' + error.message, 'error');
+    }
+}
+
+function clearGamePath() {
+    gamePathInput.value = '';
+    saveOptions();
+}
+
+async function saveOptions() {
+    const options = {
+        gamePath: gamePathInput.value,
+        autoLoad: autoLoadCheckbox.checked
+    };
+
+    try {
+        await ipcRenderer.invoke('save-options', options);
+        showToast('Options saved successfully');
+    } catch (error) {
+        showToast('Error saving options: ' + error.message, 'error');
+    }
+}
+
+async function loadOptions() {
+    try {
+        const options = await ipcRenderer.invoke('load-options');
+        if (options) {
+            gamePathInput.value = options.gamePath || '';
+            autoLoadCheckbox.checked = options.autoLoad !== false; // default to true
+
+            // If auto-load is enabled and path exists, check for config file
+            if (options.autoLoad !== false && options.gamePath) {
+                checkForConfigFile(options.gamePath);
+            }
+        }
+    } catch (error) {
+        console.error('Error loading options:', error);
+    }
+}
+
+async function checkForConfigFile(gamePath) {
+    try {
+        const configPath = path.join(gamePath, 'coldwar.project');
+        const result = await ipcRenderer.invoke('read-file', configPath);
+
+        if (result.success) {
+            // Same logic as when loading a file manually
+            let parsedData = JSON.parse(result.content);
+            configData = parsedData.settings || parsedData;
+            originalConfig = JSON.parse(JSON.stringify(configData));
+            currentFilePath = configPath;
+
+            // Update UI
+            fileNameEl.textContent = 'coldwar.project';
+            filePathEl.textContent = configPath;
+
+            // Enable all tabs
+            tabBtns.forEach(btn => {
+                if (btn.dataset.tab !== 'home') {
+                    btn.classList.remove('disabled');
+                    btn.disabled = false;
+                }
+            });
+
+            // Show action bar
+            actionBar.style.display = 'flex';
+
+            // Switch to first settings tab
+            switchTab('aiming');
+
+            // Render all settings
+            renderAllSettings();
+
+            showToast('Configuration file loaded automatically from game directory');
+        }
+    } catch (error) {
+        console.log('No config file found in game directory:', error);
+    }
+}
+
+function renderOptionsSettings() {
+    // Options are rendered statically in HTML, i just need to load values
+    loadOptions();
+}
+
 function renderAllSettings() {
     renderAimingSettings();
     renderFollowAimSettings();
@@ -414,6 +527,7 @@ function renderAllSettings() {
     renderWindowSettings();
     renderPerformanceSettings();
     updateMarkerSettings();
+    renderOptionsSettings();
 }
 
 function renderAimingSettings() {

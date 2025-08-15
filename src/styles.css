@@ -1115,6 +1115,32 @@ body {
 	border-top: 1px solid rgba(255, 255, 255, 0.2);
 }
 
+/* Options Tab */
+.path-input {
+	flex-grow: 1;
+	background: var(--bg-tertiary);
+	border: 1px solid var(--border-color);
+	border-radius: 8px;
+	padding: 0.75rem 1rem;
+	color: var(--text-primary);
+	font-size: 0.95rem;
+	transition: var(--transition);
+	min-width: 300px;
+}
+
+.path-input:focus {
+	outline: none;
+	border-color: var(--accent-color);
+	box-shadow: 0 0 0 3px var(--accent-color-light);
+}
+
+.options-description {
+	color: var(--text-secondary);
+	font-size: 0.9rem;
+	margin-top: 0.5rem;
+	line-height: 1.5;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
 	.title-bar {

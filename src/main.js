@@ -86,8 +86,8 @@ ipcMain.handle('window-is-maximized', () => {
 });
 
 // Handle file dialog
-ipcMain.handle('show-open-dialog', async () => {
-    const result = await dialog.showOpenDialog(mainWindow, {
+ipcMain.handle('show-open-dialog', async (event, options) => {
+    const defaultOptions = {
         properties: ['openFile'],
         filters: [{
                 name: 'Project CW Config Files',
@@ -98,7 +98,13 @@ ipcMain.handle('show-open-dialog', async () => {
                 extensions: ['*']
             }
         ]
-    });
+    };
+
+    const dialogOptions = options ? {
+        ...defaultOptions,
+        ...options
+    } : defaultOptions;
+    const result = await dialog.showOpenDialog(mainWindow, dialogOptions);
     return result;
 });
 
@@ -166,6 +172,64 @@ ipcMain.handle('show-save-dialog', async (event, defaultName) => {
         ]
     });
     return result;
+});
+
+// Save user options to config file
+ipcMain.handle('save-options', async (event, options) => {
+    try {
+        const appDataPath = app.getPath('appData');
+        const configDir = path.join(appDataPath, 'PCWConfigurator');
+        const configPath = path.join(configDir, 'settings.json');
+
+        // Create directory if it doesn't exist
+        await fs.mkdir(configDir, {
+            recursive: true
+        });
+
+        // Write the file
+        await fs.writeFile(configPath, JSON.stringify(options, null, 2));
+        return true;
+    } catch (error) {
+        console.error('Error saving options:', error);
+        throw error;
+    }
+});
+
+// Load user options from config file
+ipcMain.handle('load-options', async () => {
+    try {
+        const appDataPath = app.getPath('appData');
+        const configPath = path.join(appDataPath, 'PCWConfigurator', 'settings.json');
+
+        const data = await fs.readFile(configPath, 'utf8');
+        return JSON.parse(data);
+    } catch (error) {
+        if (error.code === 'ENOENT') {
+            // File doesn't exist, return defaults
+            return {
+                gamePath: '',
+                autoLoad: true
+            };
+        }
+        console.error('Error loading options:', error);
+        throw error;
+    }
+});
+
+// Check if config file exists in game directory
+ipcMain.handle('check-config-exists', async (event, gamePath) => {
+    try {
+        const configPath = path.join(gamePath, 'coldwar.project');
+        await fs.access(configPath, fs.constants.F_OK);
+        return {
+            exists: true,
+            path: configPath
+        };
+    } catch (error) {
+        return {
+            exists: false
+        };
+    }
 });
 
 app.whenReady().then(createWindow);
