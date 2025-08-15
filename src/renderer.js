@@ -272,6 +272,11 @@ async function initializeApp() {
 
     // Load options and check for config file
     await loadOptions();
+
+    // Load local settings if we already have a config file
+    if (currentFilePath) {
+        await loadLocalSettings();
+    }
 }
 
 async function updateMaximizeButton() {
@@ -308,98 +313,71 @@ async function loadConfigFile() {
             const fileResult = await ipcRenderer.invoke('read-file', filePath);
 
             if (fileResult.success) {
+                let parsedData;
                 try {
-                    // Try to parse as JSON first
-                    let parsedData = JSON.parse(fileResult.content);
+                    // First try parsing as-is
+                    parsedData = JSON.parse(fileResult.content);
+                } catch (initialError) {
+                    console.log('Initial parse failed, trying to clean JSON:', initialError);
 
-                    // Handle different file formats
-                    if (typeof parsedData === 'object' && parsedData !== null) {
-                        // New format with "settings" wrapper
-                        if (parsedData.settings) {
-                            configData = parsedData.settings;
-                        }
-                        // Old format with direct settings
-                        else {
-                            configData = parsedData;
-                        }
+                    // Try to clean the JSON content
+                    const cleanedContent = cleanJsonContent(fileResult.content);
+                    parsedData = JSON.parse(cleanedContent);
+                }
 
-                        originalConfig = JSON.parse(JSON.stringify(configData)); // Deep copy
-                        currentFilePath = filePath;
-
-                        // Update UI
-                        const fileName = filePath.split(/[\\/]/).pop();
-                        if (fileNameEl) fileNameEl.textContent = fileName;
-                        if (filePathEl) filePathEl.textContent = filePath;
-
-                        // Enable all tabs
-                        tabBtns.forEach(btn => {
-                            if (btn.dataset.tab !== 'home') {
-                                btn.classList.remove('disabled');
-                                btn.disabled = false;
-                            }
-                        });
-
-                        // Show action bar
-                        const actionBar = document.getElementById('actionBar');
-                        if (actionBar) actionBar.style.display = 'flex';
-
-                        // Switch to first settings tab
-                        switchTab('aiming');
-
-                        // Render all settings
-                        renderAllSettings();
-
-                        showToast('Configuration file loaded successfully!');
-                    } else {
-                        showToast('Invalid file format: File is not a valid JSON object', 'error');
+                // Handle different file formats
+                if (typeof parsedData === 'object' && parsedData !== null) {
+                    // New format with "settings" wrapper
+                    if (parsedData.settings) {
+                        configData = parsedData.settings;
                     }
-                } catch (parseError) {
-                    // Try to handle non-JSON files or malformed JSON
+                    // Old format with direct settings
+                    else {
+                        configData = parsedData;
+                    }
+
+                    originalConfig = JSON.parse(JSON.stringify(configData));
+                    currentFilePath = filePath;
+
+                    // Save settings to configurator folder
                     try {
-                        // Check if it's a minified JSON file without proper formatting
-                        const fixedContent = fileResult.content
-                            .replace(/([{\[,])\s*([^"\s]+)\s*:/g, '$1"$2":') // Fix unquoted keys
-                            .replace(/'/g, '"'); // Replace single quotes with double quotes
-
-                        const parsedData = JSON.parse(fixedContent);
-
-                        if (parsedData.settings) {
-                            configData = parsedData.settings;
-                        } else {
-                            configData = parsedData;
-                        }
-
-                        originalConfig = JSON.parse(JSON.stringify(configData));
-                        currentFilePath = filePath;
-
-                        // Update UI
-                        const fileName = filePath.split(/[\\/]/).pop();
-                        if (fileNameEl) fileNameEl.textContent = fileName;
-                        if (filePathEl) filePathEl.textContent = filePath;
-
-                        // Enable all tabs
-                        tabBtns.forEach(btn => {
-                            if (btn.dataset.tab !== 'home') {
-                                btn.classList.remove('disabled');
-                                btn.disabled = false;
-                            }
-                        });
-
-                        // Show action bar
-                        const actionBar = document.getElementById('actionBar');
-                        if (actionBar) actionBar.style.display = 'flex';
-
-                        // Switch to first settings tab
-                        switchTab('aiming');
-
-                        // Render all settings
-                        renderAllSettings();
-
-                        showToast('Configuration file loaded successfully! (Auto-corrected format)');
-                    } catch (finalError) {
-                        console.error('Final parsing error:', finalError);
-                        showToast(`Error parsing file: ${finalError.message}`, 'error');
+                        const settings = {
+                            configPath: filePath,
+                            gamePath: gamePathInput.value || '',
+                            autoLoad: autoLoadCheckbox.checked
+                        };
+                        await ipcRenderer.invoke('save-local-settings', filePath, settings);
+                    } catch (saveError) {
+                        console.error('Error saving local settings:', saveError);
+                        showToast('Loaded config but failed to save settings', 'warning');
                     }
+
+                    // Update UI
+                    const fileName = filePath.split(/[\\/]/).pop();
+                    if (fileNameEl) fileNameEl.textContent = fileName;
+                    if (filePathEl) filePathEl.textContent = filePath;
+
+                    // Enable all tabs
+                    tabBtns.forEach(btn => {
+                        if (btn.dataset.tab !== 'home') {
+                            btn.classList.remove('disabled');
+                            btn.disabled = false;
+                        }
+                    });
+
+                    // Show action bar
+                    const actionBar = document.getElementById('actionBar');
+                    if (actionBar) actionBar.style.display = 'flex';
+
+                    // Switch to first settings tab
+                    switchTab('aiming');
+
+                    // Render all settings
+                    renderAllSettings();
+
+                    showToast('Configuration file loaded successfully!');
+                } else {
+                    showToast('Invalid file format: File is not a valid JSON object', 'error');
                 }
             } else {
                 showToast('Error reading file: ' + fileResult.error, 'error');
@@ -409,6 +387,22 @@ async function loadConfigFile() {
         console.error('File loading error:', error);
         showToast('Error loading file: ' + error.message, 'error');
     }
+}
+
+function cleanJsonContent(content) {
+    // Fix common JSON issues
+    return content
+        // Remove BOM if present
+        .replace(/^\uFEFF/, '')
+        // Fix unquoted keys
+        .replace(/([{,]\s*)([a-zA-Z0-9_]+)(\s*:)/g, '$1"$2"$3')
+        // Fix single quotes
+        .replace(/'/g, '"')
+        // Remove trailing commas
+        .replace(/,\s*([}\]])/g, '$1')
+        // Fix comments (simple removal)
+        .replace(/\/\/.*$/gm, '')
+        .replace(/\/\*[\s\S]*?\*\//g, '');
 }
 
 // Helper function to check file content
@@ -460,10 +454,37 @@ async function saveOptions() {
     };
 
     try {
+        // Save to app data
         await ipcRenderer.invoke('save-options', options);
+
+        // Also save to local settings if we have a config file path
+        if (currentFilePath) {
+            const settings = {
+                configPath: currentFilePath,
+                gamePath: gamePathInput.value || '',
+                autoLoad: autoLoadCheckbox.checked
+            };
+            await ipcRenderer.invoke('save-local-settings', currentFilePath, settings);
+        }
+
         showToast('Options saved successfully');
     } catch (error) {
         showToast('Error saving options: ' + error.message, 'error');
+    }
+}
+
+async function loadLocalSettings() {
+    if (currentFilePath) {
+        try {
+            const settings = await ipcRenderer.invoke('load-local-settings', currentFilePath);
+
+            if (settings) {
+                gamePathInput.value = settings.gamePath || '';
+                autoLoadCheckbox.checked = settings.autoLoad !== false;
+            }
+        } catch (error) {
+            console.log('No local settings found:', error);
+        }
     }
 }
 

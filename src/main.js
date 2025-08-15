@@ -216,6 +216,60 @@ ipcMain.handle('load-options', async () => {
     }
 });
 
+// Handle saving local settings to configurator folder
+ipcMain.handle('save-local-settings', async (event, configPath, settings) => {
+    try {
+        const configDir = path.dirname(configPath);
+        const configuratorDir = path.join(configDir, 'configurator');
+
+        // Create directory if it doesn't exist
+        try {
+            await fs.mkdir(configuratorDir, {
+                recursive: true
+            });
+        } catch (mkdirError) {
+            console.error('Error creating configurator directory:', mkdirError);
+            throw new Error('Could not create settings directory');
+        }
+
+        const settingsPath = path.join(configuratorDir, 'settings.json');
+
+        // Write the settings file
+        try {
+            await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2));
+            return true;
+        } catch (writeError) {
+            console.error('Error writing settings file:', writeError);
+            throw new Error('Could not save settings file');
+        }
+    } catch (error) {
+        console.error('Error saving local settings:', error);
+        throw error;
+    }
+});
+
+// Handle loading local settings from configurator folder
+ipcMain.handle('load-local-settings', async (event, configPath) => {
+    try {
+        const configDir = path.dirname(configPath);
+        const settingsPath = path.join(configDir, 'configurator', 'settings.json');
+
+        try {
+            const data = await fs.readFile(settingsPath, 'utf8');
+            return JSON.parse(data);
+        } catch (readError) {
+            if (readError.code === 'ENOENT') {
+                return null; // File doesn't exist
+            }
+            console.error('Error reading settings file:', readError);
+            throw new Error('Could not read settings file');
+        }
+    } catch (error) {
+        console.error('Error loading local settings:', error);
+        throw error;
+    }
+});
+
 // Check if config file exists in game directory
 ipcMain.handle('check-config-exists', async (event, gamePath) => {
     try {
