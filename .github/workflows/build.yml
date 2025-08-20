@@ -54,7 +54,7 @@ jobs:
       - name: Create release tag
         id: tag
         run: |
-          TAG_NAME="Project-CW-Configurator-v$(date +'%Y%m%d%H%M%S')"
+          TAG_NAME="HEATLabs-Configurator-v$(date +'%Y%m%d%H%M%S')"
           echo "Tagging with $TAG_NAME"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
