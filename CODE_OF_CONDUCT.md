@@ -1,6 +1,6 @@
 <div align="center">
 
-# Code of Conduct - PCWStats
+# Code of Conduct - HEAT Labs
 
 </div>
 
