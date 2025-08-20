@@ -1,10 +1,10 @@
 <div align="center">
 
-# PCWStats - Project CW Configurator
+# HEAT Labs - World of Tanks: HEAT Configurator
 
-<img src="https://raw.githubusercontent.com/PCWStats/Website-Images/refs/heads/main/social-share/PCWStats.png" alt="PCWStats Banner"/>
+<img src="https://raw.githubusercontent.com/HEATLabs/Website-Images/refs/heads/main/social-share/HEATLabs.png" alt="HEAT Labs Banner"/>
 
-> One-stop solution for comprehensive statistics and insights in Project CW
+> One-stop solution for comprehensive statistics and insights in World of Tanks: HEAT
 
 </div>
 
@@ -25,7 +25,7 @@
 
 ##  About
 
-The PCW Configurator is a desktop application designed to provide players of Project CW with advanced control over game settings that aren't accessible through the standard in-game menus. This tool allows for fine-tuning of aiming mechanics, controller haptics, UI markers, performance settings, and more.
+The PCW Configurator is a desktop application designed to provide players of World of Tanks: HEAT with advanced control over game settings that aren't accessible through the standard in-game menus. This tool allows for fine-tuning of aiming mechanics, controller haptics, UI markers, performance settings, and more.
 
 Built using Electron, the app provides a user-friendly interface for modifying configuration files that would otherwise require manual JSON editing. The configurator includes safety features like default value restoration and validation to prevent invalid configurations.
 
@@ -48,7 +48,7 @@ Built using Electron, the app provides a user-friendly interface for modifying c
 
 ## Installation
 
-1. Download the latest release from the [Releases page](https://github.com/PCWStats/pcw-configurator/releases)
+1. Download the latest release from the [Releases page](https://github.com/HEATLabs/pcw-configurator/releases)
 2. For Windows: Download the `.exe` portable version
 3. For macOS: Coming Soon
 4. For Linux: Coming Soon
@@ -68,7 +68,7 @@ When downloading and running the PCW Configurator on Windows, you may see a warn
    - You may need to add an exception in your antivirus software
    - The app is completely open-source - you can review all code before running
 
-If you're uncomfortable with these warnings, you can use the [web version](https://pcwstats.github.io/playground/configurator.html) which provides similar functionality without requiring installation.
+If you're uncomfortable with these warnings, you can use the [web version](https://HEATLabs.github.io/playground/configurator.html) which provides similar functionality without requiring installation.
 
 ---
 
@@ -101,7 +101,7 @@ If you're uncomfortable with these warnings, you can use the [web version](https
 
 For users who prefer not to install software or encounter issues with the desktop app, we provide a web-based version with similar functionality:
 
-🔗 [Web Configurator](https://pcwstats.github.io/playground/configurator.html)
+🔗 [Web Configurator](https://HEATLabs.github.io/playground/configurator.html)
 
 The web version has some limitations compared to the desktop app:
 - Cannot automatically locate your config file
@@ -115,9 +115,9 @@ The web version has some limitations compared to the desktop app:
 We welcome contributions, be it code, content, bug reports, or design feedback.
 If you’d like to contribute or report an issue, you can:
 
-1. **Create an issue** in the [PCWStats main organization](https://github.com/PCWStats) that holds all repositories.
+1. **Create an issue** in the [HEAT Labs main organization](https://github.com/HEATLabs) that holds all repositories.
 2. **Contact us on Discord** via [this invite link](https://thatsinewave.github.io/Discord-Redirect/).
-3. **Use our contact form** on the [PCWStats Contact Us page](https://pcwstats.github.io/resources/contact-us.html).
+3. **Use our contact form** on the [HEAT Labs Contact Us page](https://HEATLabs.github.io/resources/contact-us.html).
 
 When submitting changes via pull requests:
 
@@ -131,4 +131,4 @@ When submitting changes via pull requests:
 
 ## License
 
-Distributed under the GNU GPL-3.0 License. See the [LICENSE](LICENSE) file for full details. PCWStats is free and open-source for community use and collaboration.
+Distributed under the GNU GPL-3.0 License. See the [LICENSE](LICENSE) file for full details. HEAT Labs is free and open-source for community use and collaboration.
