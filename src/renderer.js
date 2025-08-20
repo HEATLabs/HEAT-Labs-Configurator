@@ -423,7 +423,7 @@ async function browseGamePath() {
     try {
         const result = await ipcRenderer.invoke('show-open-dialog', {
             properties: ['openDirectory'],
-            title: 'Select Project CW Installation Folder'
+            title: 'Select your World of Tanks: HEAT Installation Folder'
         });
 
         if (!result.canceled && result.filePaths.length > 0) {

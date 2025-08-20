@@ -90,7 +90,7 @@ ipcMain.handle('show-open-dialog', async (event, options) => {
     const defaultOptions = {
         properties: ['openFile'],
         filters: [{
-                name: 'Project CW Config Files',
+                name: 'World of Tanks: HEAT Config Files',
                 extensions: ['project', 'json']
             },
             {
@@ -178,7 +178,7 @@ ipcMain.handle('show-save-dialog', async (event, defaultName) => {
 ipcMain.handle('save-options', async (event, options) => {
     try {
         const appDataPath = app.getPath('appData');
-        const configDir = path.join(appDataPath, 'PCWConfigurator');
+        const configDir = path.join(appDataPath, 'HEATLabsConfigurator');
         const configPath = path.join(configDir, 'settings.json');
 
         // Create directory if it doesn't exist
@@ -199,7 +199,7 @@ ipcMain.handle('save-options', async (event, options) => {
 ipcMain.handle('load-options', async () => {
     try {
         const appDataPath = app.getPath('appData');
-        const configPath = path.join(appDataPath, 'PCWConfigurator', 'settings.json');
+        const configPath = path.join(appDataPath, 'HEATLabsConfigurator', 'settings.json');
 
         const data = await fs.readFile(configPath, 'utf8');
         return JSON.parse(data);
