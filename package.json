@@ -51,7 +51,7 @@
   "author": "HEAT Labs Team",
   "license": "GPL-3.0",
   "devDependencies": {
-    "electron": "^28.3.3",
+    "electron": "^38.0.0",
     "electron-builder": "^24.13.3"
   }
 }
