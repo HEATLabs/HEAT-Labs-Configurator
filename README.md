@@ -25,7 +25,7 @@
 
 ##  About
 
-The PCW Configurator is a desktop application designed to provide players of World of Tanks: HEAT with advanced control over game settings that aren't accessible through the standard in-game menus. This tool allows for fine-tuning of aiming mechanics, controller haptics, UI markers, performance settings, and more.
+The HEATLabs Configurator is a desktop application designed to provide players of World of Tanks: HEAT with advanced control over game settings that aren't accessible through the standard in-game menus. This tool allows for fine-tuning of aiming mechanics, controller haptics, UI markers, performance settings, and more.
 
 Built using Electron, the app provides a user-friendly interface for modifying configuration files that would otherwise require manual JSON editing. The configurator includes safety features like default value restoration and validation to prevent invalid configurations.
 
