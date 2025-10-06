@@ -68,7 +68,7 @@ When downloading and running the PCW Configurator on Windows, you may see a warn
    - You may need to add an exception in your antivirus software
    - The app is completely open-source - you can review all code before running
 
-If you're uncomfortable with these warnings, you can use the [web version](https://HEATLabs.github.io/playground/configurator.html) which provides similar functionality without requiring installation.
+If you're uncomfortable with these warnings, you can use the [web version](https://heatlabs.net/playground/configurator.html) which provides similar functionality without requiring installation.
 
 ---
 
@@ -101,7 +101,7 @@ If you're uncomfortable with these warnings, you can use the [web version](https
 
 For users who prefer not to install software or encounter issues with the desktop app, we provide a web-based version with similar functionality:
 
-🔗 [Web Configurator](https://HEATLabs.github.io/playground/configurator.html)
+🔗 [Web Configurator](https://heatlabs.net/playground/configurator.html)
 
 The web version has some limitations compared to the desktop app:
 - Cannot automatically locate your config file
@@ -117,7 +117,7 @@ If you’d like to contribute or report an issue, you can:
 
 1. **Create an issue** in the [HEAT Labs main organization](https://github.com/HEATLabs) that holds all repositories.
 2. **Contact us on Discord** via [this invite link](https://thatsinewave.github.io/Discord-Redirect/).
-3. **Use our contact form** on the [HEAT Labs Contact Us page](https://HEATLabs.github.io/resources/contact-us.html).
+3. **Use our contact form** on the [HEAT Labs Contact Us page](https://heatlabs.net/resources/contact-us.html).
 
 When submitting changes via pull requests:
 
