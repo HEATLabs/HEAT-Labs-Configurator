@@ -2,7 +2,7 @@
 
 # HEAT Labs - World of Tanks: HEAT Configurator
 
-<img src="https://raw.githubusercontent.com/HEATLabs/Website-Images/refs/heads/main/social-share/HEATLabs.png" alt="HEAT Labs Banner"/>
+<img src="https://raw.githubusercontent.com/HEATLabs/HEAT-Labs-Images/refs/heads/main/social-share/HEATLabs.png" alt="HEAT Labs Banner"/>
 
 > One-stop solution for comprehensive statistics and insights in World of Tanks: HEAT
 
