@@ -1,6 +1,6 @@
 <div align="center">
 
-# HEAT Labs - World of Tanks: HEAT Configurator
+# HEAT Labs - Configurator
 
 <img src="https://raw.githubusercontent.com/HEATLabs/HEAT-Labs-Images/refs/heads/main/social-share/HEATLabs.png" alt="HEAT Labs Banner"/>
 
@@ -101,7 +101,7 @@ If you're uncomfortable with these warnings, you can use the [web version](https
 
 For users who prefer not to install software or encounter issues with the desktop app, we provide a web-based version with similar functionality:
 
-🔗 [Web Configurator](https://heatlabs.net/playground/configurator.html)
+🔗 [Web Configurator](https://heatlabs.net/playground/configurator)
 
 The web version has some limitations compared to the desktop app:
 - Cannot automatically locate your config file
@@ -117,7 +117,7 @@ If you’d like to contribute or report an issue, you can:
 
 1. **Create an issue** in the [HEAT Labs main organization](https://github.com/HEATLabs) that holds all repositories.
 2. **Contact us on Discord** via [this invite link](https://discord.heatlabs.net).
-3. **Use our contact form** on the [HEAT Labs Contact Us page](https://heatlabs.net/resources/contact-us.html).
+3. **Use our contact form** on the [HEAT Labs Contact Us page](https://heatlabs.net/resources/contact-us).
 
 When submitting changes via pull requests:
 
