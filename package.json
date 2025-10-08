@@ -1,6 +1,6 @@
 {
   "name": "heatlabs-configurator",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "description": "World of Tanks: HEAT Game Configurator - Desktop Application by HEAT Labs Team",
   "main": "src/main.js",
   "scripts": {
