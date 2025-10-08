@@ -6,8 +6,13 @@ const {
 } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
+const DiscordRichPresence = require('./discord-rpc');
 
 let mainWindow;
+let discordRPC = null;
+
+// Discord Application Client ID
+const DISCORD_CLIENT_ID = '1425290323986354309';
 
 // Development flag - set to true during development
 const isDevelopment = false;
@@ -55,7 +60,25 @@ function createWindow() {
 
     mainWindow.on('closed', () => {
         mainWindow = null;
+        // Disconnect Discord RPC when window closes
+        if (discordRPC) {
+            discordRPC.disconnect();
+        }
     });
+}
+
+// Initialize Discord Rich Presence
+function initializeDiscordRPC() {
+    if (DISCORD_CLIENT_ID && DISCORD_CLIENT_ID !== 'CLIENT_ID_HERE') {
+        discordRPC = new DiscordRichPresence(DISCORD_CLIENT_ID);
+        discordRPC.initialize().then(success => {
+            if (success) {
+                console.log('Discord Rich Presence initialized successfully');
+            }
+        });
+    } else {
+        console.warn('Discord Client ID not configured.');
+    }
 }
 
 // Handle window controls
@@ -90,9 +113,9 @@ ipcMain.handle('show-open-dialog', async (event, options) => {
     const defaultOptions = {
         properties: ['openFile'],
         filters: [{
-                name: 'World of Tanks: HEAT Config Files',
-                extensions: ['project', 'json']
-            },
+            name: 'World of Tanks: HEAT Config Files',
+            extensions: ['project', 'json']
+        },
             {
                 name: 'All Files',
                 extensions: ['*']
@@ -105,6 +128,12 @@ ipcMain.handle('show-open-dialog', async (event, options) => {
         ...options
     } : defaultOptions;
     const result = await dialog.showOpenDialog(mainWindow, dialogOptions);
+
+    // Update Discord RPC when opening file
+    if (!result.canceled && discordRPC && discordRPC.isConnected()) {
+        discordRPC.updateWithStatus('loading');
+    }
+
     return result;
 });
 
@@ -130,6 +159,12 @@ ipcMain.handle('read-file', async (event, filePath) => {
             };
         }
 
+        // Update Discord RPC when file is loaded
+        if (discordRPC && discordRPC.isConnected()) {
+            const fileName = path.basename(filePath);
+            discordRPC.updatePresence(`Editing: ${fileName}`, 'Making changes');
+        }
+
         return {
             success: true,
             content
@@ -145,7 +180,19 @@ ipcMain.handle('read-file', async (event, filePath) => {
 // Handle file saving
 ipcMain.handle('save-file', async (event, filePath, content) => {
     try {
+        // Update Discord RPC when saving
+        if (discordRPC && discordRPC.isConnected()) {
+            discordRPC.updateWithStatus('saving');
+        }
+
         await fs.writeFile(filePath, content, 'utf8');
+
+        // Update back to editing status after save
+        if (discordRPC && discordRPC.isConnected()) {
+            const fileName = path.basename(filePath);
+            discordRPC.updatePresence(`Editing: ${fileName}`, 'Making changes');
+        }
+
         return {
             success: true
         };
@@ -162,9 +209,9 @@ ipcMain.handle('show-save-dialog', async (event, defaultName) => {
     const result = await dialog.showSaveDialog(mainWindow, {
         defaultPath: defaultName,
         filters: [{
-                name: 'Project Files',
-                extensions: ['project']
-            },
+            name: 'Project Files',
+            extensions: ['project']
+        },
             {
                 name: 'All Files',
                 extensions: ['*']
@@ -286,9 +333,34 @@ ipcMain.handle('check-config-exists', async (event, gamePath) => {
     }
 });
 
-app.whenReady().then(createWindow);
+// Discord RPC status update handler (can be called from renderer)
+ipcMain.handle('update-discord-status', async (event, status) => {
+    if (discordRPC && discordRPC.isConnected()) {
+        discordRPC.updateWithStatus(status);
+    }
+});
+
+// Custom Discord RPC update handler
+ipcMain.handle('update-discord-custom', async (event, details, state) => {
+    if (discordRPC && discordRPC.isConnected()) {
+        discordRPC.updatePresence(details, state);
+    }
+});
+
+app.whenReady().then(() => {
+    createWindow();
+    // Initialize Discord RPC after a short delay
+    setTimeout(() => {
+        initializeDiscordRPC();
+    }, 2000);
+});
 
 app.on('window-all-closed', () => {
+    // Disconnect Discord RPC
+    if (discordRPC) {
+        discordRPC.disconnect();
+    }
+
     if (process.platform !== 'darwin') {
         app.quit();
     }
@@ -297,5 +369,12 @@ app.on('window-all-closed', () => {
 app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
         createWindow();
+    }
+});
+
+app.on('before-quit', () => {
+    // Ensure Discord RPC is disconnected before quitting
+    if (discordRPC) {
+        discordRPC.disconnect();
     }
 });
