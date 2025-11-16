@@ -55,7 +55,7 @@ class DiscordRichPresence {
             largeImageKey: 'heatlabs_logo',
             largeImageText: 'HEAT Labs Configurator',
             smallImageKey: 'editing_icon',
-            smallImageText: 'Active',
+            smallImageText: 'World of Tanks: HEAT',
             instance: false,
             buttons: [
                 {
