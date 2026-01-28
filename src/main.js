@@ -113,9 +113,9 @@ ipcMain.handle('show-open-dialog', async (event, options) => {
     const defaultOptions = {
         properties: ['openFile'],
         filters: [{
-            name: 'World of Tanks: HEAT Config Files',
-            extensions: ['project', 'json']
-        },
+                name: 'World of Tanks: HEAT Config Files',
+                extensions: ['project', 'json']
+            },
             {
                 name: 'All Files',
                 extensions: ['*']
@@ -209,9 +209,9 @@ ipcMain.handle('show-save-dialog', async (event, defaultName) => {
     const result = await dialog.showSaveDialog(mainWindow, {
         defaultPath: defaultName,
         filters: [{
-            name: 'Project Files',
-            extensions: ['project']
-        },
+                name: 'Project Files',
+                extensions: ['project']
+            },
             {
                 name: 'All Files',
                 extensions: ['*']

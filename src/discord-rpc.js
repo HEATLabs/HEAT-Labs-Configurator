@@ -57,8 +57,7 @@ class DiscordRichPresence {
             smallImageKey: 'editing_icon',
             smallImageText: 'World of Tanks: HEAT',
             instance: false,
-            buttons: [
-                {
+            buttons: [{
                     label: 'Visit HEAT Labs',
                     url: 'https://heatlabs.net'
                 },
@@ -78,10 +77,22 @@ class DiscordRichPresence {
 
     updateWithStatus(status) {
         const statusMessages = {
-            idle: { details: 'Using HEAT Labs Configurator', state: 'Idle' },
-            editing: { details: 'Editing configuration', state: 'Making changes' },
-            loading: { details: 'Loading project', state: 'Opening file' },
-            saving: { details: 'Saving project', state: 'Writing changes' }
+            idle: {
+                details: 'Using HEAT Labs Configurator',
+                state: 'Idle'
+            },
+            editing: {
+                details: 'Editing configuration',
+                state: 'Making changes'
+            },
+            loading: {
+                details: 'Loading project',
+                state: 'Opening file'
+            },
+            saving: {
+                details: 'Saving project',
+                state: 'Writing changes'
+            }
         };
 
         const message = statusMessages[status] || statusMessages.idle;
