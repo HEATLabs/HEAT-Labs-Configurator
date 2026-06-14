@@ -83,9 +83,7 @@ function initializeDiscordRPC() {
 
 // Handle window controls
 ipcMain.handle('window-minimize', () => {
-    if (mainWindow) {
-        mainWindow.minimize();
-    }
+    if (mainWindow) mainWindow.minimize();
 });
 
 ipcMain.handle('window-maximize', () => {
@@ -99,9 +97,7 @@ ipcMain.handle('window-maximize', () => {
 });
 
 ipcMain.handle('window-close', () => {
-    if (mainWindow) {
-        mainWindow.close();
-    }
+    if (mainWindow) mainWindow.close();
 });
 
 ipcMain.handle('window-is-maximized', () => {
@@ -149,22 +145,6 @@ ipcMain.handle('read-file', async (event, filePath) => {
                 error: 'File is empty'
             };
         }
-
-        // Check if it looks like a valid project file
-        if (!content.includes('AimingProjectSettings') &&
-            !content.includes('WindowProjectSettings')) {
-            return {
-                success: false,
-                error: 'File does not appear to be a valid coldwar.project file'
-            };
-        }
-
-        // Update Discord RPC when file is loaded
-        if (discordRPC && discordRPC.isConnected()) {
-            const fileName = path.basename(filePath);
-            discordRPC.updatePresence(`Editing: ${fileName}`, 'Making changes');
-        }
-
         return {
             success: true,
             content
@@ -177,17 +157,34 @@ ipcMain.handle('read-file', async (event, filePath) => {
     }
 });
 
-// Handle file saving
-ipcMain.handle('save-file', async (event, filePath, content) => {
+// Save file - preserves all original content, only updates targeted sections
+ipcMain.handle('save-file', async (event, filePath, originalContent, updatedSettings) => {
     try {
-        // Update Discord RPC when saving
-        if (discordRPC && discordRPC.isConnected()) {
-            discordRPC.updateWithStatus('saving');
+        let parsedContent;
+        try {
+            parsedContent = JSON.parse(originalContent);
+        } catch (e) {
+            return {
+                success: false,
+                error: 'Invalid JSON in original file'
+            };
         }
 
-        await fs.writeFile(filePath, content, 'utf8');
+        // Ensure settings object exists
+        if (!parsedContent.settings) {
+            parsedContent.settings = {};
+        }
 
-        // Update back to editing status after save
+        // Update only the targeted settings sections
+        for (const [sectionKey, sectionData] of Object.entries(updatedSettings)) {
+            if (sectionData !== undefined && sectionData !== null) {
+                parsedContent.settings[sectionKey] = sectionData;
+            }
+        }
+
+        const newContent = JSON.stringify(parsedContent, null, 2);
+        await fs.writeFile(filePath, newContent, 'utf8');
+
         if (discordRPC && discordRPC.isConnected()) {
             const fileName = path.basename(filePath);
             discordRPC.updatePresence(`Editing: ${fileName}`, 'Making changes');
@@ -204,36 +201,64 @@ ipcMain.handle('save-file', async (event, filePath, content) => {
     }
 });
 
-// Handle save dialog
+// Save as new file
+ipcMain.handle('save-as-file', async (event, filePath, originalContent, updatedSettings) => {
+    try {
+        let parsedContent;
+        try {
+            parsedContent = JSON.parse(originalContent);
+        } catch (e) {
+            return {
+                success: false,
+                error: 'Invalid JSON in original file'
+            };
+        }
+
+        if (!parsedContent.settings) {
+            parsedContent.settings = {};
+        }
+
+        for (const [sectionKey, sectionData] of Object.entries(updatedSettings)) {
+            if (sectionData !== undefined && sectionData !== null) {
+                parsedContent.settings[sectionKey] = sectionData;
+            }
+        }
+
+        const newContent = JSON.stringify(parsedContent, null, 2);
+        await fs.writeFile(filePath, newContent, 'utf8');
+        return {
+            success: true
+        };
+    } catch (error) {
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+});
+
 ipcMain.handle('show-save-dialog', async (event, defaultName) => {
     const result = await dialog.showSaveDialog(mainWindow, {
         defaultPath: defaultName,
         filters: [{
-                name: 'Project Files',
-                extensions: ['project']
-            },
-            {
-                name: 'All Files',
-                extensions: ['*']
-            }
-        ]
+            name: 'Project Files',
+            extensions: ['project']
+        }, {
+            name: 'All Files',
+            extensions: ['*']
+        }]
     });
     return result;
 });
 
-// Save user options to config file
 ipcMain.handle('save-options', async (event, options) => {
     try {
         const appDataPath = app.getPath('appData');
         const configDir = path.join(appDataPath, 'HEATLabsConfigurator');
         const configPath = path.join(configDir, 'settings.json');
-
-        // Create directory if it doesn't exist
         await fs.mkdir(configDir, {
             recursive: true
         });
-
-        // Write the file
         await fs.writeFile(configPath, JSON.stringify(options, null, 2));
         return true;
     } catch (error) {
@@ -242,17 +267,14 @@ ipcMain.handle('save-options', async (event, options) => {
     }
 });
 
-// Load user options from config file
 ipcMain.handle('load-options', async () => {
     try {
         const appDataPath = app.getPath('appData');
         const configPath = path.join(appDataPath, 'HEATLabsConfigurator', 'settings.json');
-
         const data = await fs.readFile(configPath, 'utf8');
         return JSON.parse(data);
     } catch (error) {
         if (error.code === 'ENOENT') {
-            // File doesn't exist, return defaults
             return {
                 gamePath: '',
                 autoLoad: true
@@ -263,61 +285,35 @@ ipcMain.handle('load-options', async () => {
     }
 });
 
-// Handle saving local settings to configurator folder
 ipcMain.handle('save-local-settings', async (event, configPath, settings) => {
     try {
         const configDir = path.dirname(configPath);
         const configuratorDir = path.join(configDir, 'configurator');
-
-        // Create directory if it doesn't exist
-        try {
-            await fs.mkdir(configuratorDir, {
-                recursive: true
-            });
-        } catch (mkdirError) {
-            console.error('Error creating configurator directory:', mkdirError);
-            throw new Error('Could not create settings directory');
-        }
-
+        await fs.mkdir(configuratorDir, {
+            recursive: true
+        });
         const settingsPath = path.join(configuratorDir, 'settings.json');
-
-        // Write the settings file
-        try {
-            await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2));
-            return true;
-        } catch (writeError) {
-            console.error('Error writing settings file:', writeError);
-            throw new Error('Could not save settings file');
-        }
+        await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2));
+        return true;
     } catch (error) {
         console.error('Error saving local settings:', error);
         throw error;
     }
 });
 
-// Handle loading local settings from configurator folder
 ipcMain.handle('load-local-settings', async (event, configPath) => {
     try {
         const configDir = path.dirname(configPath);
         const settingsPath = path.join(configDir, 'configurator', 'settings.json');
-
-        try {
-            const data = await fs.readFile(settingsPath, 'utf8');
-            return JSON.parse(data);
-        } catch (readError) {
-            if (readError.code === 'ENOENT') {
-                return null; // File doesn't exist
-            }
-            console.error('Error reading settings file:', readError);
-            throw new Error('Could not read settings file');
-        }
-    } catch (error) {
-        console.error('Error loading local settings:', error);
-        throw error;
+        const data = await fs.readFile(settingsPath, 'utf8');
+        return JSON.parse(data);
+    } catch (readError) {
+        if (readError.code === 'ENOENT') return null;
+        console.error('Error reading settings file:', readError);
+        throw readError;
     }
 });
 
-// Check if config file exists in game directory
 ipcMain.handle('check-config-exists', async (event, gamePath) => {
     try {
         const configPath = path.join(gamePath, 'coldwar.project');
@@ -333,14 +329,12 @@ ipcMain.handle('check-config-exists', async (event, gamePath) => {
     }
 });
 
-// Discord RPC status update handler (can be called from renderer)
 ipcMain.handle('update-discord-status', async (event, status) => {
     if (discordRPC && discordRPC.isConnected()) {
         discordRPC.updateWithStatus(status);
     }
 });
 
-// Custom Discord RPC update handler
 ipcMain.handle('update-discord-custom', async (event, details, state) => {
     if (discordRPC && discordRPC.isConnected()) {
         discordRPC.updatePresence(details, state);
@@ -349,32 +343,20 @@ ipcMain.handle('update-discord-custom', async (event, details, state) => {
 
 app.whenReady().then(() => {
     createWindow();
-    // Initialize Discord RPC after a short delay
     setTimeout(() => {
         initializeDiscordRPC();
     }, 2000);
 });
 
 app.on('window-all-closed', () => {
-    // Disconnect Discord RPC
-    if (discordRPC) {
-        discordRPC.disconnect();
-    }
-
-    if (process.platform !== 'darwin') {
-        app.quit();
-    }
+    if (discordRPC) discordRPC.disconnect();
+    if (process.platform !== 'darwin') app.quit();
 });
 
 app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-        createWindow();
-    }
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
 
 app.on('before-quit', () => {
-    // Ensure Discord RPC is disconnected before quitting
-    if (discordRPC) {
-        discordRPC.disconnect();
-    }
+    if (discordRPC) discordRPC.disconnect();
 });
