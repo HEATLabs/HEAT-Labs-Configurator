@@ -109,9 +109,9 @@ ipcMain.handle('show-open-dialog', async (event, options) => {
     const defaultOptions = {
         properties: ['openFile'],
         filters: [{
-                name: 'World of Tanks: HEAT Config Files',
-                extensions: ['project', 'json']
-            },
+            name: 'World of Tanks: HEAT Config Files',
+            extensions: ['project', 'json']
+        },
             {
                 name: 'All Files',
                 extensions: ['*']
@@ -327,6 +327,65 @@ ipcMain.handle('check-config-exists', async (event, gamePath) => {
             exists: false
         };
     }
+});
+
+// Handle commandline.args reading
+ipcMain.handle('read-commandline-args', async (event, argsPath) => {
+    try {
+        // Ensure bin directory exists
+        const binDir = path.dirname(argsPath);
+        await fs.mkdir(binDir, { recursive: true });
+
+        let content = '';
+        try {
+            content = await fs.readFile(argsPath, 'utf8');
+        } catch (readError) {
+            if (readError.code === 'ENOENT') {
+                // File doesn't exist, create default
+                content = '--project ../coldwar.project -m client --replay-record';
+                await fs.writeFile(argsPath, content, 'utf8');
+            } else {
+                throw readError;
+            }
+        }
+
+        return {
+            success: true,
+            content: content.trim()
+        };
+    } catch (error) {
+        console.error('Error reading commandline.args:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+});
+
+// Handle commandline.args saving
+ipcMain.handle('save-commandline-args', async (event, binPath, argsContent) => {
+    try {
+        // Ensure bin directory exists
+        await fs.mkdir(binPath, { recursive: true });
+
+        const argsFilePath = path.join(binPath, 'commandline.args');
+        await fs.writeFile(argsFilePath, argsContent, 'utf8');
+
+        return {
+            success: true
+        };
+    } catch (error) {
+        console.error('Error saving commandline.args:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+});
+
+// Handle path joining
+ipcMain.handle('join-path', async (event, ...paths) => {
+    return path.join(...paths);
 });
 
 ipcMain.handle('update-discord-status', async (event, status) => {

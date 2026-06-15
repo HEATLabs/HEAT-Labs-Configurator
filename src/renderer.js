@@ -7,6 +7,10 @@ let originalSettings = null;
 let currentFilePath = null;
 let hasAttemptedAutoLoad = false;
 
+// Command line arguments state
+let currentCommandLineArgs = null;
+let originalCommandLineContent = null;
+
 // Default values for each settings section
 const defaultValues = {
     aiming: {
@@ -97,6 +101,15 @@ const defaultValues = {
             "DeadInAiming": { "opacity": 0.3, "isEnabled": false, "isNameEnabled": false, "isHealthBarEnabled": false, "isDistanceEnabled": false },
             "InDirectInvisible": { "opacity": 0.8, "isEnabled": true, "isNameEnabled": true, "isHealthBarEnabled": true, "isDistanceEnabled": true }
         }
+    },
+    commandLine: {
+        "adaptiveSyncInterval": false,
+        "syncInterval": 1,
+        "windowMode": "maximized",
+        "windowResolution": "",
+        "hideSplashScreen": false,
+        "showConsole": false,
+        "replayRecord": true
     }
 };
 
@@ -177,6 +190,307 @@ function switchTab(tabId) {
     tabContents.forEach(content => content.classList.remove('active'));
     const targetTab = document.getElementById(`${tabId}-tab`);
     if (targetTab) targetTab.classList.add('active');
+}
+
+// ========== Command Line Args Functions ==========
+async function loadCommandLineArgs(gamePath) {
+    try {
+        // Use IPC to handle path joining in main process
+        const binPath = await ipcRenderer.invoke('join-path', gamePath, 'bin');
+        const argsPath = await ipcRenderer.invoke('join-path', binPath, 'commandline.args');
+
+        const result = await ipcRenderer.invoke('read-commandline-args', argsPath);
+        if (result.success && result.content) {
+            currentCommandLineArgs = result.content;
+            originalCommandLineContent = result.content;
+            parseAndApplyCommandLineArgs(result.content);
+            renderCommandLineSettings();
+            return true;
+        }
+    } catch (error) {
+        console.error('Error loading commandline.args:', error);
+    }
+    return false;
+}
+
+function parseAndApplyCommandLineArgs(content) {
+    // Default values
+    const args = {
+        adaptiveSyncInterval: false,
+        syncInterval: 1,
+        windowMode: "maximized",
+        windowResolution: "",
+        hideSplashScreen: false,
+        showConsole: false,
+        replayRecord: true
+    };
+
+    // Check for --project (we keep this always)
+    // Check for --replay-record
+    if (content.includes('--replay-record')) {
+        args.replayRecord = true;
+    } else {
+        args.replayRecord = false;
+    }
+
+    // Check for -asi or --adaptiveSyncInterval
+    if (content.includes('-asi') || content.includes('--adaptiveSyncInterval')) {
+        args.adaptiveSyncInterval = true;
+    }
+
+    // Check for -si or --syncInterval
+    const siMatch = content.match(/(?:-si|--syncInterval)\s+(\d+)/);
+    if (siMatch) {
+        args.syncInterval = parseInt(siMatch[1]);
+    }
+
+    // Check for -wm or --windowMode
+    const wmMatch = content.match(/(?:-wm|--windowMode)\s+(\w+)(?::(\d+x\d+))?/);
+    if (wmMatch) {
+        args.windowMode = wmMatch[1];
+        if (wmMatch[2]) {
+            args.windowResolution = wmMatch[2];
+        }
+    }
+
+    // Check for -hss or --hideSplashScreen
+    if (content.includes('-hss') || content.includes('--hideSplashScreen')) {
+        args.hideSplashScreen = true;
+    }
+
+    // Check for -sc or --showConsole
+    if (content.includes('-sc') || content.includes('--showConsole')) {
+        args.showConsole = true;
+    }
+
+    currentCommandLineArgs = args;
+}
+
+function buildCommandLineArgs() {
+    const args = [];
+
+    // Always include project path
+    args.push('--project ../coldwar.project');
+    args.push('-m client');
+
+    // Replay record
+    if (currentCommandLineArgs.replayRecord !== false) {
+        args.push('--replay-record');
+    }
+
+    // Adaptive sync interval (VSync at 60 FPS)
+    if (currentCommandLineArgs.adaptiveSyncInterval) {
+        args.push('-asi');
+    }
+
+    // Sync interval (VSync mode)
+    if (currentCommandLineArgs.syncInterval !== undefined && currentCommandLineArgs.syncInterval !== 1) {
+        args.push(`-si ${currentCommandLineArgs.syncInterval}`);
+    }
+
+    // Window mode
+    if (currentCommandLineArgs.windowMode && currentCommandLineArgs.windowMode !== 'maximized') {
+        let windowModeArg = `-wm ${currentCommandLineArgs.windowMode}`;
+        if (currentCommandLineArgs.windowResolution &&
+            (currentCommandLineArgs.windowMode === 'normal' || currentCommandLineArgs.windowMode === 'fullscreen')) {
+            windowModeArg += `:${currentCommandLineArgs.windowResolution}`;
+        }
+        args.push(windowModeArg);
+    }
+
+    // Hide splash screen
+    if (currentCommandLineArgs.hideSplashScreen) {
+        args.push('-hss');
+    }
+
+    // Show console
+    if (currentCommandLineArgs.showConsole) {
+        args.push('-sc');
+    }
+
+    return args.join(' ');
+}
+
+function renderCommandLineSettings() {
+    const tab = document.getElementById('commandline-tab');
+    if (!tab) return;
+
+    if (!currentCommandLineArgs) {
+        currentCommandLineArgs = JSON.parse(JSON.stringify(defaultValues.commandLine));
+    }
+
+    tab.innerHTML = '';
+
+    // Replay Recording
+    const replayGroup = createSettingsGroup('Replay Recording');
+    tab.appendChild(replayGroup);
+    createCheckbox(replayGroup, 'Enable Replay Recording', 'replayRecord', currentCommandLineArgs);
+
+    // VSync Settings
+    const vsyncGroup = createSettingsGroup('VSync Settings');
+    tab.appendChild(vsyncGroup);
+    createCheckbox(vsyncGroup, 'Adaptive Sync Interval (VSync at 60 FPS)', 'adaptiveSyncInterval', currentCommandLineArgs);
+
+    const syncOptions = [
+        { value: 0, label: 'Off' },
+        { value: 1, label: 'Sync every vblank (60 FPS at 60Hz)' },
+        { value: 2, label: 'Sync every 2nd vblank (30 FPS at 60Hz)' }
+    ];
+    createDropdownWithOptions(vsyncGroup, 'Sync Interval Mode', 'syncInterval', currentCommandLineArgs, syncOptions);
+
+    // Window Mode Settings
+    const windowGroup = createSettingsGroup('Window Mode Settings');
+    tab.appendChild(windowGroup);
+
+    const windowModeOptions = [
+        { value: 'normal', label: 'Normal (Windowed)' },
+        { value: 'maximized', label: 'Maximized' },
+        { value: 'fullscreen', label: 'Fullscreen' },
+        { value: 'borderless', label: 'Borderless Window' }
+    ];
+    createDropdownWithOptions(windowGroup, 'Window Mode', 'windowMode', currentCommandLineArgs, windowModeOptions);
+
+    // Resolution input (only for normal/fullscreen)
+    const resolutionItem = document.createElement('div');
+    resolutionItem.className = 'setting-item';
+    const resolutionLabel = document.createElement('div');
+    resolutionLabel.className = 'setting-label';
+    resolutionLabel.textContent = 'Window Resolution (for Normal/Fullscreen modes)';
+    const resolutionControl = document.createElement('div');
+    resolutionControl.className = 'setting-control';
+    const resolutionInput = document.createElement('input');
+    resolutionInput.type = 'text';
+    resolutionInput.className = 'path-input';
+    resolutionInput.placeholder = 'e.g., 1920x1080';
+    resolutionInput.value = currentCommandLineArgs.windowResolution || '';
+    resolutionInput.addEventListener('change', (e) => {
+        currentCommandLineArgs.windowResolution = e.target.value;
+    });
+    const resolutionReset = createResetButton(() => {
+        resolutionInput.value = '';
+        currentCommandLineArgs.windowResolution = '';
+    });
+    resolutionControl.appendChild(resolutionInput);
+    resolutionControl.appendChild(resolutionReset);
+    resolutionItem.appendChild(resolutionLabel);
+    resolutionItem.appendChild(resolutionControl);
+    windowGroup.appendChild(resolutionItem);
+
+    // Startup Settings
+    const startupGroup = createSettingsGroup('Startup Settings');
+    tab.appendChild(startupGroup);
+    createCheckbox(startupGroup, 'Hide Splash Screen on Startup', 'hideSplashScreen', currentCommandLineArgs);
+    createCheckbox(startupGroup, 'Show Console Window', 'showConsole', currentCommandLineArgs);
+
+    // Info box
+    const infoGroup = createSettingsGroup('Command Line Information');
+    const previewItem = document.createElement('div');
+    previewItem.className = 'setting-item';
+    previewItem.style.flexDirection = 'column';
+    previewItem.style.alignItems = 'flex-start';
+    previewItem.style.gap = '0.5rem';
+
+    const previewLabel = document.createElement('div');
+    previewLabel.className = 'setting-label';
+    previewLabel.textContent = 'Generated Command Line:';
+    previewLabel.style.marginBottom = '0.5rem';
+
+    const previewCode = document.createElement('code');
+    previewCode.style.cssText = `
+        background: var(--bg-primary);
+        padding: 0.75rem;
+        border-radius: 8px;
+        font-family: monospace;
+        font-size: 0.85rem;
+        width: 100%;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        word-break: break-all;
+        color: var(--accent-color);
+    `;
+
+    function updatePreview() {
+        previewCode.textContent = buildCommandLineArgs();
+    }
+
+    // Add event listeners to update preview
+    const updatePreviewListener = () => updatePreview();
+    // We'll use a MutationObserver or just update on any change
+    const inputs = tab.querySelectorAll('input, select');
+
+    previewItem.appendChild(previewLabel);
+    previewItem.appendChild(previewCode);
+    infoGroup.appendChild(previewItem);
+
+    // Initial preview update
+    setTimeout(updatePreview, 100);
+
+    // Update preview when settings change
+    tab.addEventListener('change', (e) => {
+        if (e.target.matches('input, select')) {
+            updatePreview();
+        }
+    });
+}
+
+function createDropdownWithOptions(container, label, key, settingsObj, options) {
+    const value = settingsObj[key] !== undefined ? settingsObj[key] : options[0].value;
+    const item = document.createElement('div');
+    item.className = 'setting-item';
+    const labelEl = document.createElement('div');
+    labelEl.className = 'setting-label';
+    labelEl.textContent = label;
+    const control = document.createElement('div');
+    control.className = 'setting-control';
+    const select = document.createElement('select');
+    select.className = 'dropdown-input';
+    options.forEach(option => {
+        const optionEl = document.createElement('option');
+        optionEl.value = option.value;
+        optionEl.textContent = option.label;
+        if (option.value === value) optionEl.selected = true;
+        select.appendChild(optionEl);
+    });
+    const resetBtn = createResetButton(() => {
+        const defaultValue = defaultValues.commandLine[key] !== undefined ? defaultValues.commandLine[key] : options[0].value;
+        settingsObj[key] = defaultValue;
+        select.value = defaultValue;
+    });
+    select.addEventListener('change', (e) => {
+        settingsObj[key] = e.target.value;
+    });
+    control.appendChild(select);
+    control.appendChild(resetBtn);
+    item.appendChild(labelEl);
+    item.appendChild(control);
+    container.appendChild(item);
+}
+
+function createResetButton(onClick) {
+    const resetBtn = document.createElement('button');
+    resetBtn.className = 'btn-reset';
+    resetBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></svg>';
+    resetBtn.title = 'Reset to default';
+    resetBtn.addEventListener('click', onClick);
+    return resetBtn;
+}
+
+async function saveCommandLineArgs() {
+    if (!gamePathInput.value) return;
+
+    try {
+        // Use IPC to handle path joining in main process
+        const binPath = await ipcRenderer.invoke('join-path', gamePathInput.value, 'bin');
+        const argsContent = buildCommandLineArgs();
+        const result = await ipcRenderer.invoke('save-commandline-args', binPath, argsContent);
+        if (result.success) {
+            showToast('Command line arguments saved successfully!');
+        } else {
+            showToast('Error saving command line arguments: ' + result.error, 'error');
+        }
+    } catch (error) {
+        console.error('Error saving command line args:', error);
+    }
 }
 
 // ========== File Loading ==========
@@ -278,6 +592,10 @@ async function browseGamePath() {
             const path = result.filePaths[0];
             gamePathInput.value = path;
             await saveOptions();
+
+            // Load commandline.args
+            await loadCommandLineArgs(path);
+
             const configResult = await ipcRenderer.invoke('check-config-exists', path);
             if (configResult.exists) {
                 await loadAndParseFile(configResult.path);
@@ -320,6 +638,12 @@ async function loadOptions() {
         if (options) {
             gamePathInput.value = options.gamePath || '';
             autoLoadCheckbox.checked = options.autoLoad !== false;
+
+            // Load commandline.args if game path exists
+            if (options.gamePath) {
+                await loadCommandLineArgs(options.gamePath);
+            }
+
             if (!hasAttemptedAutoLoad && options.autoLoad !== false && options.gamePath) {
                 hasAttemptedAutoLoad = true;
                 setTimeout(async () => {
@@ -349,6 +673,7 @@ function renderAllSettings() {
     renderPerformanceSettings();
     updateMarkerSettings();
     renderOptionsSettings();
+    renderCommandLineSettings();
 }
 
 function renderOptionsSettings() {
@@ -561,7 +886,7 @@ function createCheckbox(container, label, key, settingsObj) {
     input.checked = value;
     const resetBtn = document.createElement('button');
     resetBtn.className = 'btn-reset';
-    resetBtn.innerHTML = '↺';
+    resetBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></svg>';
     resetBtn.title = 'Reset to default';
     input.addEventListener('change', (e) => {
         settingsObj[key] = e.target.checked;
@@ -598,7 +923,7 @@ function createDropdown(container, label, key, settingsObj, options) {
     });
     const resetBtn = document.createElement('button');
     resetBtn.className = 'btn-reset';
-    resetBtn.innerHTML = '↺';
+    resetBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></svg>';
     resetBtn.title = 'Reset to default';
     select.addEventListener('change', (e) => {
         settingsObj[key] = e.target.value;
@@ -647,6 +972,9 @@ async function saveConfig() {
             originalFileContent = JSON.stringify(JSON.parse(originalFileContent), null, 2);
             originalSettings = JSON.parse(JSON.stringify(configData));
             showToast('Configuration saved successfully!');
+
+            // Also save command line args
+            await saveCommandLineArgs();
         } else {
             showToast('Error saving file: ' + result.error, 'error');
         }
@@ -739,6 +1067,13 @@ function resetAllSettings() {
                 Object.assign(markerSettings.platoonMarkerSettings.markerSettings, JSON.parse(JSON.stringify(defaultValues.markers.platoon)));
             }
         }
+
+        // Reset command line args
+        if (currentCommandLineArgs) {
+            currentCommandLineArgs = JSON.parse(JSON.stringify(defaultValues.commandLine));
+            renderCommandLineSettings();
+        }
+
         renderAllSettings();
         showToast('All settings reset to default values');
         modal.classList.remove('show');
