@@ -192,6 +192,38 @@ function switchTab(tabId) {
     if (targetTab) targetTab.classList.add('active');
 }
 
+// ========== Helper: Extract game path from config file path ==========
+function extractGamePathFromConfigFile(configFilePath) {
+    const path = require('path');
+    return path.dirname(configFilePath);
+}
+
+// ========== Helper: Auto-save game path to options ==========
+async function autoSaveGamePath(gamePath) {
+    if (!gamePath) return false;
+
+    try {
+        // Get current options
+        const currentOptions = await ipcRenderer.invoke('load-options');
+        const updatedOptions = {
+            gamePath: gamePath,
+            autoLoad: currentOptions?.autoLoad !== false
+        };
+
+        // Save updated options
+        await ipcRenderer.invoke('save-options', updatedOptions);
+
+        // Update UI
+        gamePathInput.value = gamePath;
+
+        showToast(`Game path automatically detected: ${gamePath}`, 'success');
+        return true;
+    } catch (error) {
+        console.error('Error auto-saving game path:', error);
+        return false;
+    }
+}
+
 // ========== Command Line Args Functions ==========
 async function loadCommandLineArgs(gamePath) {
     try {
@@ -538,11 +570,20 @@ async function loadAndParseFile(filePath) {
         originalSettings = JSON.parse(JSON.stringify(configData));
         currentFilePath = filePath;
 
+        // ===== AUTO-DETECT AND SAVE GAME PATH =====
+        const detectedGamePath = extractGamePathFromConfigFile(filePath);
+        if (detectedGamePath) {
+            await autoSaveGamePath(detectedGamePath);
+
+            // Also load command line args from the detected game path
+            await loadCommandLineArgs(detectedGamePath);
+        }
+
         // Save local settings
         try {
             const settings = {
                 configPath: filePath,
-                gamePath: gamePathInput.value || '',
+                gamePath: gamePathInput.value || detectedGamePath || '',
                 autoLoad: autoLoadCheckbox.checked
             };
             await ipcRenderer.invoke('save-local-settings', filePath, settings);
