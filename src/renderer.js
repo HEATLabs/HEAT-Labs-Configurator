@@ -516,12 +516,12 @@ async function saveCommandLineArgs() {
         const argsContent = buildCommandLineArgs();
         const result = await ipcRenderer.invoke('save-commandline-args', binPath, argsContent);
         if (result.success) {
-            showToast('Command line arguments saved successfully!');
+            showToast('Changes saved successfully!');
         } else {
-            showToast('Error saving command line arguments: ' + result.error, 'error');
+            showToast('Error saving changes: ' + result.error, 'error');
         }
     } catch (error) {
-        console.error('Error saving command line args:', error);
+        console.error('Error saving changes:', error);
     }
 }
 
@@ -667,9 +667,9 @@ async function saveOptions() {
             };
             await ipcRenderer.invoke('save-local-settings', currentFilePath, settings);
         }
-        showToast('Options saved successfully');
+        showToast('Changes saved successfully');
     } catch (error) {
-        showToast('Error saving options: ' + error.message, 'error');
+        showToast('Error saving changes: ' + error.message, 'error');
     }
 }
 
@@ -1012,15 +1012,15 @@ async function saveConfig() {
         if (result.success) {
             originalFileContent = JSON.stringify(JSON.parse(originalFileContent), null, 2);
             originalSettings = JSON.parse(JSON.stringify(configData));
-            showToast('Configuration saved successfully!');
+            showToast('Changes saved successfully!');
 
             // Also save command line args
             await saveCommandLineArgs();
         } else {
-            showToast('Error saving file: ' + result.error, 'error');
+            showToast('Error saving changes: ' + result.error, 'error');
         }
     } catch (error) {
-        showToast('Error saving configuration: ' + error.message, 'error');
+        showToast('Error saving changes: ' + error.message, 'error');
     }
 }
 
