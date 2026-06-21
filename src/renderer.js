@@ -1,4 +1,6 @@
-const { ipcRenderer } = require('electron');
+const {
+    ipcRenderer
+} = require('electron');
 
 // Application state
 let configData = null;
@@ -6,6 +8,8 @@ let originalFileContent = null;
 let originalSettings = null;
 let currentFilePath = null;
 let hasAttemptedAutoLoad = false;
+let editingProfileId = null;
+let originalProfileData = null;
 
 // Command line arguments state
 let currentCommandLineArgs = null;
@@ -81,25 +85,115 @@ const defaultValues = {
     },
     markers: {
         "ally": {
-            "InDirectVisible": { "opacity": 1.0, "isEnabled": true, "isNameEnabled": true, "isHealthBarEnabled": true, "isDistanceEnabled": true },
-            "Dead": { "opacity": 0.5, "isEnabled": true, "isNameEnabled": false, "isHealthBarEnabled": false, "isDistanceEnabled": false },
-            "DeadHotKey": { "opacity": 0.7, "isEnabled": true, "isNameEnabled": true, "isHealthBarEnabled": false, "isDistanceEnabled": false },
-            "DeadInAiming": { "opacity": 0.3, "isEnabled": false, "isNameEnabled": false, "isHealthBarEnabled": false, "isDistanceEnabled": false },
-            "InDirectInvisible": { "opacity": 0.8, "isEnabled": true, "isNameEnabled": true, "isHealthBarEnabled": true, "isDistanceEnabled": true }
+            "InDirectVisible": {
+                "opacity": 1.0,
+                "isEnabled": true,
+                "isNameEnabled": true,
+                "isHealthBarEnabled": true,
+                "isDistanceEnabled": true
+            },
+            "Dead": {
+                "opacity": 0.5,
+                "isEnabled": true,
+                "isNameEnabled": false,
+                "isHealthBarEnabled": false,
+                "isDistanceEnabled": false
+            },
+            "DeadHotKey": {
+                "opacity": 0.7,
+                "isEnabled": true,
+                "isNameEnabled": true,
+                "isHealthBarEnabled": false,
+                "isDistanceEnabled": false
+            },
+            "DeadInAiming": {
+                "opacity": 0.3,
+                "isEnabled": false,
+                "isNameEnabled": false,
+                "isHealthBarEnabled": false,
+                "isDistanceEnabled": false
+            },
+            "InDirectInvisible": {
+                "opacity": 0.8,
+                "isEnabled": true,
+                "isNameEnabled": true,
+                "isHealthBarEnabled": true,
+                "isDistanceEnabled": true
+            }
         },
         "enemy": {
-            "InDirectVisible": { "opacity": 1.0, "isEnabled": true, "isNameEnabled": true, "isHealthBarEnabled": true, "isDistanceEnabled": true },
-            "Dead": { "opacity": 0.5, "isEnabled": true, "isNameEnabled": false, "isHealthBarEnabled": false, "isDistanceEnabled": false },
-            "DeadHotKey": { "opacity": 0.7, "isEnabled": true, "isNameEnabled": true, "isHealthBarEnabled": false, "isDistanceEnabled": false },
-            "DeadInAiming": { "opacity": 0.3, "isEnabled": false, "isNameEnabled": false, "isHealthBarEnabled": false, "isDistanceEnabled": false },
-            "InDirectInvisible": { "opacity": 0.8, "isEnabled": true, "isNameEnabled": true, "isHealthBarEnabled": true, "isDistanceEnabled": true }
+            "InDirectVisible": {
+                "opacity": 1.0,
+                "isEnabled": true,
+                "isNameEnabled": true,
+                "isHealthBarEnabled": true,
+                "isDistanceEnabled": true
+            },
+            "Dead": {
+                "opacity": 0.5,
+                "isEnabled": true,
+                "isNameEnabled": false,
+                "isHealthBarEnabled": false,
+                "isDistanceEnabled": false
+            },
+            "DeadHotKey": {
+                "opacity": 0.7,
+                "isEnabled": true,
+                "isNameEnabled": true,
+                "isHealthBarEnabled": false,
+                "isDistanceEnabled": false
+            },
+            "DeadInAiming": {
+                "opacity": 0.3,
+                "isEnabled": false,
+                "isNameEnabled": false,
+                "isHealthBarEnabled": false,
+                "isDistanceEnabled": false
+            },
+            "InDirectInvisible": {
+                "opacity": 0.8,
+                "isEnabled": true,
+                "isNameEnabled": true,
+                "isHealthBarEnabled": true,
+                "isDistanceEnabled": true
+            }
         },
         "platoon": {
-            "InDirectVisible": { "opacity": 1.0, "isEnabled": true, "isNameEnabled": true, "isHealthBarEnabled": true, "isDistanceEnabled": true },
-            "Dead": { "opacity": 0.5, "isEnabled": true, "isNameEnabled": false, "isHealthBarEnabled": false, "isDistanceEnabled": false },
-            "DeadHotKey": { "opacity": 0.7, "isEnabled": true, "isNameEnabled": true, "isHealthBarEnabled": false, "isDistanceEnabled": false },
-            "DeadInAiming": { "opacity": 0.3, "isEnabled": false, "isNameEnabled": false, "isHealthBarEnabled": false, "isDistanceEnabled": false },
-            "InDirectInvisible": { "opacity": 0.8, "isEnabled": true, "isNameEnabled": true, "isHealthBarEnabled": true, "isDistanceEnabled": true }
+            "InDirectVisible": {
+                "opacity": 1.0,
+                "isEnabled": true,
+                "isNameEnabled": true,
+                "isHealthBarEnabled": true,
+                "isDistanceEnabled": true
+            },
+            "Dead": {
+                "opacity": 0.5,
+                "isEnabled": true,
+                "isNameEnabled": false,
+                "isHealthBarEnabled": false,
+                "isDistanceEnabled": false
+            },
+            "DeadHotKey": {
+                "opacity": 0.7,
+                "isEnabled": true,
+                "isNameEnabled": true,
+                "isHealthBarEnabled": false,
+                "isDistanceEnabled": false
+            },
+            "DeadInAiming": {
+                "opacity": 0.3,
+                "isEnabled": false,
+                "isNameEnabled": false,
+                "isHealthBarEnabled": false,
+                "isDistanceEnabled": false
+            },
+            "InDirectInvisible": {
+                "opacity": 0.8,
+                "isEnabled": true,
+                "isNameEnabled": true,
+                "isHealthBarEnabled": true,
+                "isDistanceEnabled": true
+            }
         }
     },
     commandLine: {
@@ -284,6 +378,25 @@ function renderProfileList(profiles) {
         name.style.cssText = 'font-weight: 600; color: var(--text-primary); font-size: 1rem;';
         name.textContent = profile.name;
 
+        // Show editing indicator if this profile is being edited
+        if (editingProfileId === profile.id) {
+            const editBadge = document.createElement('span');
+            editBadge.style.cssText = `
+                display: inline-block;
+                margin-left: 0.75rem;
+                font-size: 0.7rem;
+                font-weight: 500;
+                color: var(--accent-color);
+                background: var(--accent-color-light);
+                padding: 0.15rem 0.6rem;
+                border-radius: 4px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            `;
+            editBadge.textContent = 'Editing';
+            name.appendChild(editBadge);
+        }
+
         const meta = document.createElement('div');
         meta.style.cssText = 'font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;';
         const date = new Date(profile.createdAt);
@@ -295,21 +408,53 @@ function renderProfileList(profiles) {
         const actions = document.createElement('div');
         actions.style.cssText = 'display: flex; gap: 0.5rem;';
 
-        const loadBtn = document.createElement('button');
-        loadBtn.className = 'btn-secondary';
-        loadBtn.style.cssText = 'padding: 0.5rem 1rem; font-size: 0.85rem;';
-        loadBtn.innerHTML = 'Load';
-        loadBtn.title = 'Load this profile (changes will be applied to the editor, click Save Configuration to write to file)';
-        loadBtn.addEventListener('click', () => loadProfile(profile.id));
+        // If this profile is being edited, show different buttons
+        if (editingProfileId === profile.id) {
+            // Save Edited Profile button
+            const saveEditBtn = document.createElement('button');
+            saveEditBtn.className = 'btn-success';
+            saveEditBtn.style.cssText = 'padding: 0.5rem 1rem; font-size: 0.85rem;';
+            saveEditBtn.innerHTML = 'Save Changes';
+            saveEditBtn.title = 'Save changes to this profile';
+            saveEditBtn.addEventListener('click', () => saveEditedProfile());
 
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'btn-danger';
-        deleteBtn.style.cssText = 'padding: 0.5rem 1rem; font-size: 0.85rem;';
-        deleteBtn.innerHTML = 'Delete';
-        deleteBtn.addEventListener('click', () => deleteProfile(profile.id, profile.name));
+            // Cancel Edit button
+            const cancelEditBtn = document.createElement('button');
+            cancelEditBtn.className = 'btn-secondary';
+            cancelEditBtn.style.cssText = 'padding: 0.5rem 1rem; font-size: 0.85rem;';
+            cancelEditBtn.innerHTML = 'Cancel Edit';
+            cancelEditBtn.title = 'Cancel editing and revert changes';
+            cancelEditBtn.addEventListener('click', () => cancelEditingProfile());
 
-        actions.appendChild(loadBtn);
-        actions.appendChild(deleteBtn);
+            actions.appendChild(saveEditBtn);
+            actions.appendChild(cancelEditBtn);
+        } else {
+            // Edit button
+            const editBtn = document.createElement('button');
+            editBtn.className = 'btn-secondary';
+            editBtn.style.cssText = 'padding: 0.5rem 1rem; font-size: 0.85rem;';
+            editBtn.innerHTML = 'Edit';
+            editBtn.title = 'Edit this profile (changes will be applied to the editor)';
+            editBtn.addEventListener('click', () => startEditingProfile(profile.id));
+
+            // Load button
+            const loadBtn = document.createElement('button');
+            loadBtn.className = 'btn-secondary';
+            loadBtn.style.cssText = 'padding: 0.5rem 1rem; font-size: 0.85rem;';
+            loadBtn.innerHTML = 'Load';
+            loadBtn.title = 'Load this profile (changes will be applied to the editor, click Save Configuration to write to file)';
+            loadBtn.addEventListener('click', () => loadProfile(profile.id));
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'btn-danger';
+            deleteBtn.style.cssText = 'padding: 0.5rem 1rem; font-size: 0.85rem;';
+            deleteBtn.innerHTML = 'Delete';
+            deleteBtn.addEventListener('click', () => deleteProfile(profile.id, profile.name));
+
+            actions.appendChild(editBtn);
+            actions.appendChild(loadBtn);
+            actions.appendChild(deleteBtn);
+        }
 
         profileItem.appendChild(info);
         profileItem.appendChild(actions);
@@ -317,9 +462,212 @@ function renderProfileList(profiles) {
     });
 }
 
+async function startEditingProfile(profileId) {
+    try {
+        const profile = await ipcRenderer.invoke('load-profile', profileId);
+        if (!profile) {
+            showToast('Profile not found.', 'error');
+            return;
+        }
+
+        // Store original profile data for cancellation
+        originalProfileData = JSON.parse(JSON.stringify(profile));
+        editingProfileId = profileId;
+
+        // Apply settings to configData
+        if (profile.settings) {
+            for (const [key, value] of Object.entries(profile.settings)) {
+                if (value && typeof value === 'object') {
+                    if (!configData) configData = {};
+                    configData[key] = JSON.parse(JSON.stringify(value));
+                }
+            }
+        }
+
+        // Apply command line args
+        if (profile.commandLine) {
+            currentCommandLineArgs = JSON.parse(JSON.stringify(profile.commandLine));
+            renderCommandLineSettings();
+        }
+
+        // Re-render all settings
+        renderAllSettings();
+
+        showToast(`Now editing profile "${profile.name}". Make your changes and click "Save Changes".`, 'success');
+
+        // Switch to the first settings tab to show the loaded settings
+        switchTab('aiming');
+
+        // Refresh profile list to show editing indicator
+        loadProfiles();
+
+    } catch (error) {
+        console.error('Error starting profile edit:', error);
+        showToast('Error starting profile edit: ' + error.message, 'error');
+    }
+}
+
+async function saveEditedProfile() {
+    if (!editingProfileId) {
+        showToast('No profile is being edited.', 'error');
+        return;
+    }
+
+    if (!configData) {
+        showToast('No configuration loaded.', 'error');
+        return;
+    }
+
+    try {
+        // Load the original profile to get its name and metadata
+        const originalProfile = await ipcRenderer.invoke('load-profile', editingProfileId);
+        if (!originalProfile) {
+            showToast('Profile not found.', 'error');
+            return;
+        }
+
+        // Gather all current settings
+        const profileData = {
+            name: originalProfile.name,
+            settings: {
+                'cw::AimingProjectSettings': configData['cw::AimingProjectSettings'] || {},
+                'cw::FollowAimSettings': configData['cw::FollowAimSettings'] || {},
+                'cw::ArmorOutlinerProjectSettings': configData['cw::ArmorOutlinerProjectSettings'] || {},
+                'cw::HapticsProjectSettings': configData['cw::HapticsProjectSettings'] || {},
+                'engine::WindowProjectSettings': configData['engine::WindowProjectSettings'] || {},
+                'FrameLimiterSettings': configData['FrameLimiterSettings'] || {},
+                'cw::hud::battle::VehicleMarkerSettingsSingleton::ProjectSettings': configData['cw::hud::battle::VehicleMarkerSettingsSingleton::ProjectSettings'] || {}
+            },
+            commandLine: currentCommandLineArgs ? JSON.parse(JSON.stringify(currentCommandLineArgs)) : null,
+            createdAt: originalProfile.createdAt || new Date().toISOString()
+        };
+
+        // Delete the old profile
+        await ipcRenderer.invoke('delete-profile', editingProfileId);
+
+        // Save the updated profile
+        const result = await ipcRenderer.invoke('save-profile', profileData);
+
+        if (result.success) {
+            showToast(`Profile "${originalProfile.name}" updated successfully!`, 'success');
+            editingProfileId = null;
+            originalProfileData = null;
+            loadProfiles();
+        } else {
+            showToast('Error updating profile.', 'error');
+        }
+    } catch (error) {
+        console.error('Error saving edited profile:', error);
+        showToast('Error saving profile: ' + error.message, 'error');
+    }
+}
+
+function cancelEditingProfile() {
+    if (!editingProfileId || !originalProfileData) {
+        editingProfileId = null;
+        originalProfileData = null;
+        loadProfiles();
+        return;
+    }
+
+    // Confirm cancellation
+    const modal = document.getElementById('confirmationModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalMessage = document.getElementById('modalMessage');
+    const modalCancel = document.getElementById('modalCancel');
+    const modalConfirm = document.getElementById('modalConfirm');
+
+    modalTitle.textContent = 'Cancel Editing';
+    modalMessage.textContent = 'Are you sure you want to cancel editing? All changes made to this profile will be lost.';
+    modal.classList.add('show');
+
+    const handleConfirm = () => {
+        // Revert to original profile data
+        if (originalProfileData) {
+            if (originalProfileData.settings) {
+                for (const [key, value] of Object.entries(originalProfileData.settings)) {
+                    if (value && typeof value === 'object') {
+                        if (!configData) configData = {};
+                        configData[key] = JSON.parse(JSON.stringify(value));
+                    }
+                }
+            }
+
+            if (originalProfileData.commandLine) {
+                currentCommandLineArgs = JSON.parse(JSON.stringify(originalProfileData.commandLine));
+                renderCommandLineSettings();
+            }
+
+            renderAllSettings();
+        }
+
+        editingProfileId = null;
+        originalProfileData = null;
+        loadProfiles();
+
+        showToast('Editing cancelled. Changes reverted.', 'warning');
+        modal.classList.remove('show');
+        modalConfirm.removeEventListener('click', handleConfirm);
+        modalCancel.removeEventListener('click', handleCancel);
+    };
+
+    const handleCancel = () => {
+        modal.classList.remove('show');
+        modalConfirm.removeEventListener('click', handleConfirm);
+        modalCancel.removeEventListener('click', handleCancel);
+    };
+
+    modalConfirm.addEventListener('click', handleConfirm);
+    modalCancel.addEventListener('click', handleCancel);
+}
+
+async function loadProfile(profileId) {
+    try {
+        const profile = await ipcRenderer.invoke('load-profile', profileId);
+        if (!profile) {
+            showToast('Profile not found.', 'error');
+            return;
+        }
+
+        // Apply settings to configData
+        if (profile.settings) {
+            for (const [key, value] of Object.entries(profile.settings)) {
+                if (value && typeof value === 'object') {
+                    if (!configData) configData = {};
+                    configData[key] = JSON.parse(JSON.stringify(value));
+                }
+            }
+        }
+
+        // Apply command line args
+        if (profile.commandLine) {
+            currentCommandLineArgs = JSON.parse(JSON.stringify(profile.commandLine));
+            renderCommandLineSettings();
+        }
+
+        // Re-render all settings
+        renderAllSettings();
+
+        showToast(`Profile "${profile.name}" loaded successfully! Click "Save Configuration" to write changes to your config file.`, 'success');
+
+        // Switch to the first settings tab to show the loaded settings
+        switchTab('aiming');
+
+    } catch (error) {
+        console.error('Error loading profile:', error);
+        showToast('Error loading profile: ' + error.message, 'error');
+    }
+}
+
 async function saveCurrentProfile() {
     if (!configData) {
         showToast('No configuration loaded. Please load a config file first.', 'error');
+        return;
+    }
+
+    // If editing a profile, update it instead
+    if (editingProfileId) {
+        await saveEditedProfile();
         return;
     }
 
@@ -369,45 +717,12 @@ async function saveCurrentProfile() {
     }
 }
 
-async function loadProfile(profileId) {
-    try {
-        const profile = await ipcRenderer.invoke('load-profile', profileId);
-        if (!profile) {
-            showToast('Profile not found.', 'error');
-            return;
-        }
-
-        // Apply settings to configData
-        if (profile.settings) {
-            for (const [key, value] of Object.entries(profile.settings)) {
-                if (value && typeof value === 'object') {
-                    if (!configData) configData = {};
-                    configData[key] = JSON.parse(JSON.stringify(value));
-                }
-            }
-        }
-
-        // Apply command line args
-        if (profile.commandLine) {
-            currentCommandLineArgs = JSON.parse(JSON.stringify(profile.commandLine));
-            renderCommandLineSettings();
-        }
-
-        // Re-render all settings
-        renderAllSettings();
-
-        showToast(`Profile "${profile.name}" loaded successfully! Click "Save Configuration" to write changes to your config file.`, 'success');
-
-        // Switch to the first settings tab to show the loaded settings
-        switchTab('aiming');
-
-    } catch (error) {
-        console.error('Error loading profile:', error);
-        showToast('Error loading profile: ' + error.message, 'error');
-    }
-}
-
 async function deleteProfile(profileId, profileName) {
+    // If this profile is being edited, cancel editing first
+    if (editingProfileId === profileId) {
+        cancelEditingProfile();
+    }
+
     // Show confirmation modal
     const modal = document.getElementById('confirmationModal');
     const modalTitle = document.getElementById('modalTitle');
@@ -582,10 +897,18 @@ function renderCommandLineSettings() {
     tab.appendChild(vsyncGroup);
     createCheckbox(vsyncGroup, 'Adaptive Sync Interval (VSync at 60 FPS)', 'adaptiveSyncInterval', currentCommandLineArgs);
 
-    const syncOptions = [
-        { value: 0, label: 'Off' },
-        { value: 1, label: 'Sync every vblank (60 FPS at 60Hz)' },
-        { value: 2, label: 'Sync every 2nd vblank (30 FPS at 60Hz)' }
+    const syncOptions = [{
+            value: 0,
+            label: 'Off'
+        },
+        {
+            value: 1,
+            label: 'Sync every vblank (60 FPS at 60Hz)'
+        },
+        {
+            value: 2,
+            label: 'Sync every 2nd vblank (30 FPS at 60Hz)'
+        }
     ];
     createDropdownWithOptions(vsyncGroup, 'Sync Interval Mode', 'syncInterval', currentCommandLineArgs, syncOptions);
 
@@ -593,11 +916,22 @@ function renderCommandLineSettings() {
     const windowGroup = createSettingsGroup('Window Mode Settings');
     tab.appendChild(windowGroup);
 
-    const windowModeOptions = [
-        { value: 'normal', label: 'Normal (Windowed)' },
-        { value: 'maximized', label: 'Maximized' },
-        { value: 'fullscreen', label: 'Fullscreen' },
-        { value: 'borderless', label: 'Borderless Window' }
+    const windowModeOptions = [{
+            value: 'normal',
+            label: 'Normal (Windowed)'
+        },
+        {
+            value: 'maximized',
+            label: 'Maximized'
+        },
+        {
+            value: 'fullscreen',
+            label: 'Fullscreen'
+        },
+        {
+            value: 'borderless',
+            label: 'Borderless Window'
+        }
     ];
     createDropdownWithOptions(windowGroup, 'Window Mode', 'windowMode', currentCommandLineArgs, windowModeOptions);
 
