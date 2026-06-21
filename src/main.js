@@ -329,6 +329,131 @@ ipcMain.handle('check-config-exists', async (event, gamePath) => {
     }
 });
 
+// ========== Profile Management ==========
+
+// Get the profiles directory
+function getProfilesDir() {
+    const appDataPath = app.getPath('appData');
+    return path.join(appDataPath, 'HEATLabsConfigurator', 'profiles');
+}
+
+// Get the profiles index file path
+function getProfilesIndexPath() {
+    return path.join(getProfilesDir(), 'index.json');
+}
+
+// Load all profiles from index
+async function loadProfilesIndex() {
+    try {
+        const indexPath = getProfilesIndexPath();
+        const data = await fs.readFile(indexPath, 'utf8');
+        return JSON.parse(data);
+    } catch (error) {
+        if (error.code === 'ENOENT') {
+            return { profiles: [] };
+        }
+        console.error('Error loading profiles index:', error);
+        return { profiles: [] };
+    }
+}
+
+// Save profiles index
+async function saveProfilesIndex(index) {
+    const indexPath = getProfilesIndexPath();
+    const profilesDir = getProfilesDir();
+    await fs.mkdir(profilesDir, { recursive: true });
+    await fs.writeFile(indexPath, JSON.stringify(index, null, 2));
+}
+
+// Generate unique ID for profile
+function generateProfileId() {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+}
+
+// IPC Handlers for profiles
+ipcMain.handle('save-profile', async (event, profileData) => {
+    try {
+        const profilesDir = getProfilesDir();
+        await fs.mkdir(profilesDir, { recursive: true });
+
+        // Load existing index
+        const index = await loadProfilesIndex();
+
+        // Generate unique ID for the profile
+        const id = generateProfileId();
+        const profileWithId = {
+            id: id,
+            name: profileData.name,
+            settings: profileData.settings,
+            commandLine: profileData.commandLine,
+            createdAt: profileData.createdAt || new Date().toISOString()
+        };
+
+        // Add to index
+        index.profiles.push({
+            id: id,
+            name: profileData.name,
+            createdAt: profileData.createdAt || new Date().toISOString()
+        });
+
+        // Save index
+        await saveProfilesIndex(index);
+
+        // Save profile data to separate file
+        const profilePath = path.join(profilesDir, `${id}.json`);
+        await fs.writeFile(profilePath, JSON.stringify(profileWithId, null, 2));
+
+        return { success: true, id: id };
+    } catch (error) {
+        console.error('Error saving profile:', error);
+        throw error;
+    }
+});
+
+ipcMain.handle('load-profiles', async () => {
+    try {
+        const index = await loadProfilesIndex();
+        return index.profiles || [];
+    } catch (error) {
+        console.error('Error loading profiles:', error);
+        return [];
+    }
+});
+
+ipcMain.handle('load-profile', async (event, profileId) => {
+    try {
+        const profilesDir = getProfilesDir();
+        const profilePath = path.join(profilesDir, `${profileId}.json`);
+        const data = await fs.readFile(profilePath, 'utf8');
+        return JSON.parse(data);
+    } catch (error) {
+        console.error('Error loading profile:', error);
+        throw error;
+    }
+});
+
+ipcMain.handle('delete-profile', async (event, profileId) => {
+    try {
+        const profilesDir = getProfilesDir();
+        const profilePath = path.join(profilesDir, `${profileId}.json`);
+
+        // Delete the profile file
+        await fs.unlink(profilePath);
+
+        // Remove from index
+        const index = await loadProfilesIndex();
+        index.profiles = index.profiles.filter(p => p.id !== profileId);
+        await saveProfilesIndex(index);
+
+        return { success: true };
+    } catch (error) {
+        console.error('Error deleting profile:', error);
+        throw error;
+    }
+});
+
+// ========== Command Line Args Handlers ==========
+
 // Handle commandline.args reading
 ipcMain.handle('read-commandline-args', async (event, argsPath) => {
     try {

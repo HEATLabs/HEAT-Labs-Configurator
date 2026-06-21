@@ -127,6 +127,12 @@ const browseGamePathBtn = document.getElementById('browseGamePath');
 const clearGamePathBtn = document.getElementById('clearGamePath');
 const autoLoadCheckbox = document.getElementById('autoLoadCheckbox');
 
+// Profiles
+const profileNameInput = document.getElementById('profileNameInput');
+const saveProfileBtn = document.getElementById('saveProfileBtn');
+const profileList = document.getElementById('profileList');
+const noProfilesMessage = document.getElementById('noProfilesMessage');
+
 // Window controls
 const minimizeBtn = document.getElementById('minimizeBtn');
 const maximizeBtn = document.getElementById('maximizeBtn');
@@ -145,6 +151,7 @@ const markerSettingsContent = document.getElementById('marker-settings-content')
 document.addEventListener('DOMContentLoaded', () => {
     initializeApp();
     loadOptions();
+    loadProfiles();
 });
 
 async function initializeApp() {
@@ -162,6 +169,12 @@ async function initializeApp() {
     browseGamePathBtn.addEventListener('click', browseGamePath);
     clearGamePathBtn.addEventListener('click', clearGamePath);
     autoLoadCheckbox.addEventListener('change', saveOptions);
+
+    // Profile events
+    saveProfileBtn.addEventListener('click', saveCurrentProfile);
+    profileNameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') saveCurrentProfile();
+    });
 
     tabBtns.forEach(btn => {
         btn.addEventListener('click', () => switchTab(btn.dataset.tab));
@@ -190,6 +203,11 @@ function switchTab(tabId) {
     tabContents.forEach(content => content.classList.remove('active'));
     const targetTab = document.getElementById(`${tabId}-tab`);
     if (targetTab) targetTab.classList.add('active');
+
+    // Refresh profile list when switching to profiles tab
+    if (tabId === 'profiles') {
+        loadProfiles();
+    }
 }
 
 // ========== Helper: Extract game path from config file path ==========
@@ -222,6 +240,207 @@ async function autoSaveGamePath(gamePath) {
         console.error('Error auto-saving game path:', error);
         return false;
     }
+}
+
+// ========== Profile Management ==========
+
+async function loadProfiles() {
+    try {
+        const profiles = await ipcRenderer.invoke('load-profiles');
+        renderProfileList(profiles);
+    } catch (error) {
+        console.error('Error loading profiles:', error);
+    }
+}
+
+function renderProfileList(profiles) {
+    const container = profileList;
+    const noMsg = noProfilesMessage;
+
+    // Clear existing profiles
+    container.innerHTML = '';
+
+    if (!profiles || profiles.length === 0) {
+        noMsg.style.display = 'block';
+        return;
+    }
+
+    noMsg.style.display = 'none';
+
+    // Sort profiles by date (newest first)
+    const sortedProfiles = [...profiles].sort((a, b) => {
+        return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+
+    sortedProfiles.forEach((profile, index) => {
+        const profileItem = document.createElement('div');
+        profileItem.className = 'setting-item';
+        profileItem.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem;';
+
+        const info = document.createElement('div');
+        info.style.cssText = 'display: flex; flex-direction: column; flex: 1;';
+
+        const name = document.createElement('div');
+        name.style.cssText = 'font-weight: 600; color: var(--text-primary); font-size: 1rem;';
+        name.textContent = profile.name;
+
+        const meta = document.createElement('div');
+        meta.style.cssText = 'font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;';
+        const date = new Date(profile.createdAt);
+        meta.textContent = `Saved: ${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+
+        info.appendChild(name);
+        info.appendChild(meta);
+
+        const actions = document.createElement('div');
+        actions.style.cssText = 'display: flex; gap: 0.5rem;';
+
+        const loadBtn = document.createElement('button');
+        loadBtn.className = 'btn-secondary';
+        loadBtn.style.cssText = 'padding: 0.5rem 1rem; font-size: 0.85rem;';
+        loadBtn.innerHTML = 'Load';
+        loadBtn.title = 'Load this profile (changes will be applied to the editor, click Save Configuration to write to file)';
+        loadBtn.addEventListener('click', () => loadProfile(profile.id));
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'btn-danger';
+        deleteBtn.style.cssText = 'padding: 0.5rem 1rem; font-size: 0.85rem;';
+        deleteBtn.innerHTML = 'Delete';
+        deleteBtn.addEventListener('click', () => deleteProfile(profile.id, profile.name));
+
+        actions.appendChild(loadBtn);
+        actions.appendChild(deleteBtn);
+
+        profileItem.appendChild(info);
+        profileItem.appendChild(actions);
+        container.appendChild(profileItem);
+    });
+}
+
+async function saveCurrentProfile() {
+    if (!configData) {
+        showToast('No configuration loaded. Please load a config file first.', 'error');
+        return;
+    }
+
+    const name = profileNameInput.value.trim();
+    if (!name) {
+        showToast('Please enter a profile name.', 'error');
+        profileNameInput.focus();
+        return;
+    }
+
+    if (name.length > 100) {
+        showToast('Profile name must be 100 characters or less.', 'error');
+        return;
+    }
+
+    // Check for duplicate name
+    const existingProfiles = await ipcRenderer.invoke('load-profiles');
+    if (existingProfiles && existingProfiles.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+        showToast(`A profile named "${name}" already exists. Please use a different name.`, 'error');
+        return;
+    }
+
+    try {
+        // Gather all current settings
+        const profileData = {
+            name: name,
+            settings: {
+                'cw::AimingProjectSettings': configData['cw::AimingProjectSettings'] || {},
+                'cw::FollowAimSettings': configData['cw::FollowAimSettings'] || {},
+                'cw::ArmorOutlinerProjectSettings': configData['cw::ArmorOutlinerProjectSettings'] || {},
+                'cw::HapticsProjectSettings': configData['cw::HapticsProjectSettings'] || {},
+                'engine::WindowProjectSettings': configData['engine::WindowProjectSettings'] || {},
+                'FrameLimiterSettings': configData['FrameLimiterSettings'] || {},
+                'cw::hud::battle::VehicleMarkerSettingsSingleton::ProjectSettings': configData['cw::hud::battle::VehicleMarkerSettingsSingleton::ProjectSettings'] || {}
+            },
+            commandLine: currentCommandLineArgs ? JSON.parse(JSON.stringify(currentCommandLineArgs)) : null,
+            createdAt: new Date().toISOString()
+        };
+
+        await ipcRenderer.invoke('save-profile', profileData);
+        showToast(`Profile "${name}" saved successfully!`);
+        profileNameInput.value = '';
+        loadProfiles();
+    } catch (error) {
+        console.error('Error saving profile:', error);
+        showToast('Error saving profile: ' + error.message, 'error');
+    }
+}
+
+async function loadProfile(profileId) {
+    try {
+        const profile = await ipcRenderer.invoke('load-profile', profileId);
+        if (!profile) {
+            showToast('Profile not found.', 'error');
+            return;
+        }
+
+        // Apply settings to configData
+        if (profile.settings) {
+            for (const [key, value] of Object.entries(profile.settings)) {
+                if (value && typeof value === 'object') {
+                    if (!configData) configData = {};
+                    configData[key] = JSON.parse(JSON.stringify(value));
+                }
+            }
+        }
+
+        // Apply command line args
+        if (profile.commandLine) {
+            currentCommandLineArgs = JSON.parse(JSON.stringify(profile.commandLine));
+            renderCommandLineSettings();
+        }
+
+        // Re-render all settings
+        renderAllSettings();
+
+        showToast(`Profile "${profile.name}" loaded successfully! Click "Save Configuration" to write changes to your config file.`, 'success');
+
+        // Switch to the first settings tab to show the loaded settings
+        switchTab('aiming');
+
+    } catch (error) {
+        console.error('Error loading profile:', error);
+        showToast('Error loading profile: ' + error.message, 'error');
+    }
+}
+
+async function deleteProfile(profileId, profileName) {
+    // Show confirmation modal
+    const modal = document.getElementById('confirmationModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalMessage = document.getElementById('modalMessage');
+    const modalCancel = document.getElementById('modalCancel');
+    const modalConfirm = document.getElementById('modalConfirm');
+
+    modalTitle.textContent = 'Delete Profile';
+    modalMessage.textContent = `Are you sure you want to delete the profile "${profileName}"? This cannot be undone.`;
+    modal.classList.add('show');
+
+    const handleConfirm = async () => {
+        try {
+            await ipcRenderer.invoke('delete-profile', profileId);
+            showToast(`Profile "${profileName}" deleted successfully.`);
+            loadProfiles();
+        } catch (error) {
+            console.error('Error deleting profile:', error);
+            showToast('Error deleting profile: ' + error.message, 'error');
+        }
+        modal.classList.remove('show');
+        modalConfirm.removeEventListener('click', handleConfirm);
+        modalCancel.removeEventListener('click', handleCancel);
+    };
+
+    const handleCancel = () => {
+        modal.classList.remove('show');
+        modalConfirm.removeEventListener('click', handleConfirm);
+        modalCancel.removeEventListener('click', handleCancel);
+    };
+
+    modalConfirm.addEventListener('click', handleConfirm);
+    modalCancel.addEventListener('click', handleCancel);
 }
 
 // ========== Command Line Args Functions ==========

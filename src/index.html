@@ -57,6 +57,11 @@
                 <path d="M8 11l4 4 4-4" />
                 <path d="M4 19h16" />
               </svg> Import Config </button>
+            <button class="tab-btn disabled" data-tab="profiles" disabled>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg> Profiles </button>
             <button class="tab-btn disabled" data-tab="aiming" disabled>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="3" />
@@ -119,6 +124,31 @@
                 <h2>Load Configuration File</h2>
                 <p>Select your coldwar.project file to begin customization</p>
                 <button id="browseFile" class="btn-primary">Browse Files</button>
+              </div>
+            </div>
+          </div>
+          <div class="tab-content" id="profiles-tab">
+            <div class="settings-group">
+              <h4>Save Current Profile</h4>
+              <div class="setting-item" style="flex-direction: column; align-items: stretch; gap: 0.75rem;">
+                <div style="display: flex; gap: 0.75rem; align-items: center;">
+                  <input type="text" id="profileNameInput" class="path-input" placeholder="Enter profile name (max 100 characters)" maxlength="100" style="flex: 1;">
+                  <button id="saveProfileBtn" class="btn-success" style="white-space: nowrap; padding: 0.75rem 1.5rem;">Save Profile</button>
+                </div>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">
+                  <span id="charCount">0</span>/100 characters
+                </div>
+              </div>
+            </div>
+            <div class="settings-group">
+              <h4>Your Profiles</h4>
+              <div id="profileListContainer">
+                <div id="profileList" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                  <!-- Profiles will be loaded here -->
+                </div>
+                <div id="noProfilesMessage" style="color: var(--text-muted); text-align: center; padding: 2rem 0;">
+                  No profiles saved yet. Save your current settings as a profile!
+                </div>
               </div>
             </div>
           </div>
