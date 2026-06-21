@@ -435,7 +435,16 @@ function renderProfileList(profiles) {
             editBtn.style.cssText = 'padding: 0.5rem 1rem; font-size: 0.85rem;';
             editBtn.innerHTML = 'Edit';
             editBtn.title = 'Edit this profile (changes will be applied to the editor)';
-            editBtn.addEventListener('click', () => startEditingProfile(profile.id));
+
+            // If another profile is being edited, disable the Edit button
+            if (editingProfileId !== null) {
+                editBtn.disabled = true;
+                editBtn.style.opacity = '0.5';
+                editBtn.style.cursor = 'not-allowed';
+                editBtn.title = 'Another profile is currently being edited. Please finish or cancel that edit first.';
+            } else {
+                editBtn.addEventListener('click', () => startEditingProfile(profile.id));
+            }
 
             // Load button
             const loadBtn = document.createElement('button');
