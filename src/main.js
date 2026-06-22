@@ -20,9 +20,9 @@ const isDevelopment = false;
 function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1280,
-        height: 720,
+        height: 740,
         minWidth: 1280,
-        minHeight: 720,
+        minHeight: 740,
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false,
@@ -109,9 +109,9 @@ ipcMain.handle('show-open-dialog', async (event, options) => {
     const defaultOptions = {
         properties: ['openFile'],
         filters: [{
-            name: 'World of Tanks: HEAT Config Files',
-            extensions: ['project', 'json']
-        },
+                name: 'World of Tanks: HEAT Config Files',
+                extensions: ['project', 'json']
+            },
             {
                 name: 'All Files',
                 extensions: ['*']
@@ -350,10 +350,14 @@ async function loadProfilesIndex() {
         return JSON.parse(data);
     } catch (error) {
         if (error.code === 'ENOENT') {
-            return { profiles: [] };
+            return {
+                profiles: []
+            };
         }
         console.error('Error loading profiles index:', error);
-        return { profiles: [] };
+        return {
+            profiles: []
+        };
     }
 }
 
@@ -361,7 +365,9 @@ async function loadProfilesIndex() {
 async function saveProfilesIndex(index) {
     const indexPath = getProfilesIndexPath();
     const profilesDir = getProfilesDir();
-    await fs.mkdir(profilesDir, { recursive: true });
+    await fs.mkdir(profilesDir, {
+        recursive: true
+    });
     await fs.writeFile(indexPath, JSON.stringify(index, null, 2));
 }
 
@@ -374,7 +380,9 @@ function generateProfileId() {
 ipcMain.handle('save-profile', async (event, profileData) => {
     try {
         const profilesDir = getProfilesDir();
-        await fs.mkdir(profilesDir, { recursive: true });
+        await fs.mkdir(profilesDir, {
+            recursive: true
+        });
 
         // Load existing index
         const index = await loadProfilesIndex();
@@ -403,7 +411,10 @@ ipcMain.handle('save-profile', async (event, profileData) => {
         const profilePath = path.join(profilesDir, `${id}.json`);
         await fs.writeFile(profilePath, JSON.stringify(profileWithId, null, 2));
 
-        return { success: true, id: id };
+        return {
+            success: true,
+            id: id
+        };
     } catch (error) {
         console.error('Error saving profile:', error);
         throw error;
@@ -445,7 +456,9 @@ ipcMain.handle('delete-profile', async (event, profileId) => {
         index.profiles = index.profiles.filter(p => p.id !== profileId);
         await saveProfilesIndex(index);
 
-        return { success: true };
+        return {
+            success: true
+        };
     } catch (error) {
         console.error('Error deleting profile:', error);
         throw error;
@@ -459,7 +472,9 @@ ipcMain.handle('read-commandline-args', async (event, argsPath) => {
     try {
         // Ensure bin directory exists
         const binDir = path.dirname(argsPath);
-        await fs.mkdir(binDir, { recursive: true });
+        await fs.mkdir(binDir, {
+            recursive: true
+        });
 
         let content = '';
         try {
@@ -491,7 +506,9 @@ ipcMain.handle('read-commandline-args', async (event, argsPath) => {
 ipcMain.handle('save-commandline-args', async (event, binPath, argsContent) => {
     try {
         // Ensure bin directory exists
-        await fs.mkdir(binPath, { recursive: true });
+        await fs.mkdir(binPath, {
+            recursive: true
+        });
 
         const argsFilePath = path.join(binPath, 'commandline.args');
         await fs.writeFile(argsFilePath, argsContent, 'utf8');

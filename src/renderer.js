@@ -241,11 +241,141 @@ const markerTypeSelect = document.getElementById('markerTypeSelect');
 const markerStateSelect = document.getElementById('markerStateSelect');
 const markerSettingsContent = document.getElementById('marker-settings-content');
 
+// ========== Tab Info Data ==========
+const tabInfoData = {
+    home: {
+        title: 'Import Configuration',
+        description: 'Load your World of Tanks: HEAT configuration file to begin editing. The configurator supports the coldwar.project file format used by the game.',
+        details: [
+            'Click "Browse Files" to select your coldwar.project file from your game directory',
+            'You can also drag and drop a .project file directly onto the window',
+            'Once loaded, all settings sections will become available for editing',
+            'The file path will be automatically detected and saved for future use'
+        ]
+    },
+    profiles: {
+        title: 'Profile Management',
+        description: 'Save and manage your configuration presets. Profiles allow you to quickly switch between different settings configurations without manually adjusting each value.',
+        details: [
+            'Enter a name and click "Save Profile" to save your current settings as a preset',
+            'Profiles store all settings including aiming, armor outliner, controller, markers, and command line options',
+            'Click "Load" to apply a saved profile to the current configuration',
+            'Click "Edit" to modify an existing profile\'s settings',
+            'Delete unwanted profiles to keep your list organized'
+        ]
+    },
+    aiming: {
+        title: 'Aiming Settings (Controller Only)',
+        description: 'Configure aim assist sensitivity, target locking, and distance-based aiming parameters. These settings control how your crosshair behaves when engaging targets.',
+        details: [
+            'Aim Assist Sensitivity: Controls how quickly aim assist reacts at different distances',
+            'Target Lock On Time: Delay before aim assist locks onto a target',
+            'Distance Update Speed: How often distance calculations are refreshed',
+            'Max/Min Distance: Effective range for aim assist functionality',
+            'CQC Settings: Close-quarters combat aiming parameters for urban combat'
+        ]
+    },
+    'aim-assist': {
+        title: 'Aim Assist (Controller Only)',
+        description: 'Fine-tune the follow aim mechanics that help track moving targets. These settings control magnet strength, centering behavior, and acceleration characteristics.',
+        details: [
+            'Magnet Power: Strength of aim assist tracking (Min, Max, and Multipliers)',
+            'Centring Time: How quickly the crosshair returns to center',
+            'Sensitivity Factor: Overall sensitivity adjustment for follow aim',
+            'Inner/Outer Radius: Aim assist activation zones around the target',
+            'Tank Centring Size: Deadzone size for tank crosshair centering'
+        ]
+    },
+    armor: {
+        title: 'Armor Outliner',
+        description: 'Configure the armor visualization system that highlights weak points and armor thickness on enemy vehicles.',
+        details: [
+            'Max Distance: Maximum range at which armor outlines are visible',
+            'Default Mode: Choose between Full, Partial, or Off display modes',
+            'Toggle visibility of armor outlines on enemy vehicles',
+            'Helps identify weak spots for more effective penetration'
+        ]
+    },
+    controller: {
+        title: 'Controller Haptics',
+        description: 'Adjust controller vibration settings for different types of in-game feedback. Customize rumble intensity and duration for various actions.',
+        details: [
+            'Three rumble levels: Heavy, Medium, and Light',
+            'Each level has independent duration and frequency controls',
+            'High/Low frequency balance affects rumble feel',
+            'Duration settings control how long each rumble type lasts',
+            'Create custom feedback profiles for different actions'
+        ]
+    },
+    markers: {
+        title: 'Vehicle Markers',
+        description: 'Configure how vehicle markers appear on your HUD. Customize visibility, opacity, and information displayed for allies, enemies, and platoon members.',
+        details: [
+            'Three marker types: Allies, Enemies, and Platoon members',
+            'Five visibility states: Direct Visible, Dead, Dead (Hot Key), Dead (In Aiming), Direct Invisible',
+            'Toggle individual elements: Name, Health Bar, Distance, and overall visibility',
+            'Opacity control for each marker state and type',
+            'Fine-tune marker behavior for different combat situations'
+        ]
+    },
+    window: {
+        title: 'Window & Resolution',
+        description: 'Configure the game window size and resolution settings. Set minimum dimensions to ensure optimal display on your monitor.',
+        details: [
+            'Set minimum width and height for the game window',
+            'Prevents the game from becoming too small to play comfortably',
+            'Changes apply after game restart',
+            'Recommended values: 1280x720 minimum, 1920x1080 for optimal play'
+        ]
+    },
+    performance: {
+        title: 'Performance & Frame Limiter',
+        description: 'Control frame rate limits and performance settings for both active and inactive game windows. Optimize FPS for better performance or lower system load.',
+        details: [
+            'Active Client: Settings when game is in focus (default: 1000 FPS)',
+            'Inactive Client: Settings when game is in background (default: 30 FPS)',
+            'Carried Overspent: Smoothing factor for frame timing',
+            'Lower frame rates on inactive window save system resources',
+            'Higher frame rates for active window reduce input lag'
+        ]
+    },
+    commandline: {
+        title: 'Command Line Arguments',
+        description: 'Configure startup arguments for the game client. These settings control how the game launches and behaves at runtime.',
+        details: [
+            'Replay Recording: Enable/disable replay recording functionality',
+            'VSync Settings: Control vertical sync for screen tearing prevention',
+            'Window Mode: Choose between Normal, Maximized, Fullscreen, or Borderless',
+            'Hide Splash Screen: Skip the startup splash screen animation',
+            'Show Console: Open a debug console window on launch'
+        ]
+    },
+    options: {
+        title: 'Application Options',
+        description: 'Configure the configurator application settings. Set your game installation path and auto-load preferences.',
+        details: [
+            'Game Installation Path: Point to your World of Tanks: HEAT installation folder',
+            'Auto-load config on startup: Automatically load your config when the app starts',
+            'The game path is used to locate the coldwar.project file and commandline.args',
+            'Changes to options are saved automatically'
+        ]
+    }
+};
+
+// Info modal elements
+const infoModal = document.getElementById('infoModal');
+const infoModalTitle = document.getElementById('infoModalTitle');
+const infoModalDescription = document.getElementById('infoModalDescription');
+const infoModalDetails = document.getElementById('infoModalDetails');
+const infoModalClose = document.getElementById('infoModalClose');
+const infoModalOk = document.getElementById('infoModalOk');
+
 // ========== Initialization ==========
 document.addEventListener('DOMContentLoaded', () => {
     initializeApp();
     loadOptions();
     loadProfiles();
+    initInfoModal();
 });
 
 async function initializeApp() {
@@ -277,8 +407,59 @@ async function initializeApp() {
     if (markerTypeSelect) markerTypeSelect.addEventListener('change', updateMarkerSettings);
     if (markerStateSelect) markerStateSelect.addEventListener('change', updateMarkerSettings);
 
+    // Info button events
+    document.querySelectorAll('.tab-info-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const tabId = btn.dataset.tab;
+            if (tabId && tabInfoData[tabId]) {
+                showTabInfo(tabId);
+            }
+        });
+    });
+
     updateMaximizeButton();
     await loadOptions();
+}
+
+function initInfoModal() {
+    infoModalClose.addEventListener('click', closeInfoModal);
+    infoModalOk.addEventListener('click', closeInfoModal);
+    infoModal.addEventListener('click', (e) => {
+        if (e.target === infoModal) {
+            closeInfoModal();
+        }
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && infoModal.classList.contains('show')) {
+            closeInfoModal();
+        }
+    });
+}
+
+function showTabInfo(tabId) {
+    const info = tabInfoData[tabId];
+    if (!info) return;
+
+    infoModalTitle.textContent = info.title;
+    infoModalDescription.textContent = info.description;
+
+    infoModalDetails.innerHTML = '';
+    if (info.details && info.details.length > 0) {
+        const ul = document.createElement('ul');
+        info.details.forEach(detail => {
+            const li = document.createElement('li');
+            li.textContent = detail;
+            ul.appendChild(li);
+        });
+        infoModalDetails.appendChild(ul);
+    }
+
+    infoModal.classList.add('show');
+}
+
+function closeInfoModal() {
+    infoModal.classList.remove('show');
 }
 
 async function updateMaximizeButton() {
@@ -1750,6 +1931,7 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         const modal = document.getElementById('confirmationModal');
         if (modal.classList.contains('show')) modal.classList.remove('show');
+        if (infoModal.classList.contains('show')) closeInfoModal();
     }
 });
 

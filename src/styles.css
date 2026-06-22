@@ -371,6 +371,7 @@ body {
 	flex-direction: column;
 	padding: 1rem 0;
 	overflow-y: auto;
+	flex-shrink: 0;
 }
 
 .tab-btn {
@@ -417,6 +418,39 @@ body {
 
 .tab-btn svg {
 	flex-shrink: 0;
+}
+
+/* Tab Info Button */
+.tab-info-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+	font-size: 16px;
+	font-weight: 700;
+	color: var(--text-muted);
+	background: var(--bg-tertiary);
+	border-radius: 50%;
+	margin-left: auto;
+	cursor: pointer;
+	transition: var(--transition);
+	line-height: 1;
+	flex-shrink: 0;
+	-webkit-app-region: no-drag;
+}
+
+.tab-info-btn:hover {
+	color: var(--accent-color);
+	background: var(--accent-color-light);
+	border-color: var(--accent-color);
+	transform: scale(1.1);
+}
+
+.tab-btn.active .tab-info-btn {
+	color: var(--accent-color);
+	background: var(--bg-secondary);
+	border-color: var(--accent-color);
 }
 
 /* Tab Content */
@@ -974,7 +1008,7 @@ body {
 	background: var(--card-bg);
 	border-radius: 12px;
 	padding: 2rem;
-	max-width: 450px;
+	max-width: 550px;
 	width: 90%;
 	box-shadow: var(--shadow-heavy);
 	transform: translateY(20px);
@@ -995,13 +1029,88 @@ body {
 .modal-content p {
 	color: var(--text-secondary);
 	margin-bottom: 1.5rem;
-	line-height: 1.5;
+	line-height: 1.6;
 }
 
 .modal-actions {
 	display: flex;
 	gap: 1rem;
 	justify-content: flex-end;
+}
+
+/* Info Modal Specific Styles */
+.info-modal-content {
+	max-width: 600px;
+}
+
+.info-modal-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 1rem;
+	padding-bottom: 0.75rem;
+	border-bottom: 1px solid var(--border-color);
+}
+
+.info-modal-header h3 {
+	margin-bottom: 0;
+	color: var(--accent-color);
+}
+
+.btn-close-modal {
+	background: none;
+	border: none;
+	color: var(--text-muted);
+	font-size: 1.75rem;
+	cursor: pointer;
+	transition: var(--transition);
+	line-height: 1;
+	padding: 0 0.5rem;
+}
+
+.btn-close-modal:hover {
+	color: var(--text-primary);
+	transform: rotate(90deg);
+}
+
+.info-modal-body {
+	margin-bottom: 1.5rem;
+}
+
+.info-modal-body p {
+	color: var(--text-secondary);
+	line-height: 1.7;
+	margin-bottom: 1rem;
+}
+
+.info-modal-details {
+	background: var(--bg-secondary);
+	border-radius: 8px;
+	padding: 1rem 1.25rem;
+	margin-top: 0.5rem;
+	border-left: 3px solid var(--accent-color);
+}
+
+.info-modal-details ul {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+
+.info-modal-details ul li {
+	color: var(--text-secondary);
+	padding: 0.4rem 0;
+	font-size: 0.95rem;
+	display: flex;
+	align-items: flex-start;
+	gap: 0.5rem;
+}
+
+.info-modal-details ul li::before {
+	content: '•';
+	color: var(--accent-color);
+	font-weight: bold;
+	font-size: 1.2rem;
 }
 
 /* Home Tab Styles */
@@ -1184,6 +1293,7 @@ body {
 		padding: 0.75rem 1rem;
 		border-radius: 8px;
 		border: 1px solid var(--border-color);
+		flex-shrink: 0;
 	}
 
 	.tab-btn.active {
@@ -1194,6 +1304,13 @@ body {
 
 	.tab-btn::before {
 		display: none;
+	}
+
+	.tab-info-btn {
+		width: 18px;
+		height: 18px;
+		font-size: 12px;
+		margin-left: 0.5rem;
 	}
 
 	.markers-header {
